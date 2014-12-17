@@ -24,11 +24,11 @@ private:
     void publish(const std::string &topic, int payloadlen=0, const void *payload=NULL, int qos=0, bool retain=false);
     void subscribe(const std::string &sub, int qos=0);
 
-    std::list<ConnectedClient> listConnectedClients;
-
     void on_message(const struct mosquitto_message *message);
     void onNewConnection(const struct mosquitto_message *message);
     void onRemovedConnection(const struct mosquitto_message *message);
+
+    std::list<ConnectedClient> listConnectedClients;
 };
 
 #endif // EXCHANGEMANAGER_H
