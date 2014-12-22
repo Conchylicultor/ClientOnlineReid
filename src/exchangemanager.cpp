@@ -1,6 +1,7 @@
 #include "exchangemanager.h"
 
 #include <iostream>
+#include <fstream>
 #include <string>
 
 using namespace std;
@@ -10,6 +11,7 @@ using namespace std;
 const string protocolVersionTopic = "reid_client/protocol_version";
 const string newCamTopic = "cam_clients/new_connection";
 const string removeCamTopic = "cam_clients/remove_connection";
+const string dataCamTopic = "cam_clients/data";
 
 const unsigned int version_protocol = 1;
 const unsigned int max_version_protocol = 1000000;
@@ -22,6 +24,10 @@ ExchangeManager &ExchangeManager::getInstance()
 
 ExchangeManager::ExchangeManager() : mosqpp::mosquittopp()
 {
+    // Clear the received file
+    ofstream receivedFile("../../Data/Received/received.txt", ofstream::out | ofstream::trunc);
+    receivedFile.close();
+
     // Initialise the library
     mosqpp::lib_init();
 
@@ -73,6 +79,7 @@ ExchangeManager::ExchangeManager() : mosqpp::mosquittopp()
     // Subscription to search for new connected clients
     this->subscribe(newCamTopic, 2);
     this->subscribe(removeCamTopic, 2);
+    this->subscribe(dataCamTopic, 2);
 
     // Publish a retained message for the new clients which will connect to this clients
     this->publish(protocolVersionTopic,
@@ -162,6 +169,10 @@ void ExchangeManager::on_message(const mosquitto_message *message)
     {
         onRemovedConnection(message);
     }
+    else if(message->topic == dataCamTopic)
+    {
+        onDataReceived(message);
+    }
 }
 
 void ExchangeManager::onNewConnection(const mosquitto_message *message)
@@ -199,4 +210,35 @@ void ExchangeManager::onRemovedConnection(const mosquitto_message *message)
     {
         cout << "Warning: client not found" << endl;
     }
+}
+
+void ExchangeManager::onDataReceived(const mosquitto_message *message)
+{
+    cout << "Received :" << endl;
+    fstream receivedFile("../../Data/Received/received.txt", ios::out | ios::in | ios::app);
+    if(!receivedFile.is_open())
+    {
+        cout << "Unable to open the file (please, check your working directory)" << endl;
+    }
+
+    // Read current file
+    int currentIndex = 0;
+    string ligne;
+    while(getline(receivedFile, ligne))
+    {
+        currentIndex = stoi(ligne);
+        cout << ligne << endl;
+    }
+    //receivedFile.unget();
+    receivedFile.clear();
+    currentIndex++;
+    receivedFile << currentIndex << endl;
+
+
+    ofstream featuresFile("../../Data/Received/seq" + std::to_string(currentIndex) + ".bin", ios_base::out | ios_base::binary);
+
+    featuresFile.write(reinterpret_cast<char*>(message->payload), message->payloadlen);
+
+    featuresFile.close();
+    receivedFile.close();
 }

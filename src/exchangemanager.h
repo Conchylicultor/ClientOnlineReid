@@ -27,6 +27,7 @@ private:
     void on_message(const struct mosquitto_message *message);
     void onNewConnection(const struct mosquitto_message *message);
     void onRemovedConnection(const struct mosquitto_message *message);
+    void onDataReceived(const struct mosquitto_message *message);
 
     std::list<ConnectedClient> listConnectedClients;
 };
