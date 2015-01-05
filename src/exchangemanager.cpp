@@ -226,8 +226,10 @@ void ExchangeManager::onDataReceived(const mosquitto_message *message)
     string ligne;
     while(getline(receivedFile, ligne))
     {
-        currentIndex = stoi(ligne);
-        cout << ligne << endl;
+        if(!ligne.empty())
+        {
+            currentIndex = stoi(ligne);
+        }
     }
     //receivedFile.unget();
     receivedFile.clear();
@@ -237,6 +239,7 @@ void ExchangeManager::onDataReceived(const mosquitto_message *message)
 
     ofstream featuresFile("../../Data/Received/seq" + std::to_string(currentIndex) + ".bin", ios_base::out | ios_base::binary);
 
+    cout << reinterpret_cast<float*>(message->payload)[0] << endl;
     featuresFile.write(reinterpret_cast<char*>(message->payload), message->payloadlen);
 
     featuresFile.close();
