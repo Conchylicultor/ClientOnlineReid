@@ -20,6 +20,28 @@ void ReidManager::computeNext()
     }
 
     cout << "Compute: " << nextSeqString << endl;
+    ifstream seqFile("../../Data/Received/seq" + nextSeqString + ".txt", ios_base::in);
+    if(!seqFile.is_open())
+    {
+        cout << "Unable to open the sequence file (please, check your working directory)" << endl;
+        return;
+    }
+
+    size_t arrayReceivedSize = 0;
+    float *arrayReceived = nullptr;
+
+    seqFile >> arrayReceivedSize;
+
+    arrayReceived = new float[arrayReceivedSize];
+
+
+    for(size_t i = 0 ; i < arrayReceivedSize ; ++i)
+    {
+        seqFile >> arrayReceived[i];
+        cout << arrayReceived[i] << endl;
+    }
+
+    delete arrayReceived;
 }
 
 string ReidManager::getNextSeqString() const

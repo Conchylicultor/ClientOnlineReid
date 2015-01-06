@@ -215,10 +215,13 @@ void ExchangeManager::onRemovedConnection(const mosquitto_message *message)
 void ExchangeManager::onDataReceived(const mosquitto_message *message)
 {
     cout << "Received :" << endl;
+
+    // Update the received index
+
     fstream receivedFile("../../Data/Received/received.txt", ios::out | ios::in | ios::app);
     if(!receivedFile.is_open())
     {
-        cout << "Unable to open the file (please, check your working directory)" << endl;
+        cout << "Unable to open the received file (please, check your working directory)" << endl;
     }
 
     // Read current file
@@ -236,12 +239,20 @@ void ExchangeManager::onDataReceived(const mosquitto_message *message)
     currentIndex++;
     receivedFile << currentIndex << endl;
 
+    receivedFile.close();
 
-    ofstream featuresFile("../../Data/Received/seq" + std::to_string(currentIndex) + ".bin", ios_base::out | ios_base::binary);
+    // Save on disk the received data
 
-    cout << reinterpret_cast<float*>(message->payload)[0] << endl;
-    featuresFile.write(reinterpret_cast<char*>(message->payload), message->payloadlen);
+    ofstream featuresFile("../../Data/Received/seq" + std::to_string(currentIndex) + ".txt", ios_base::out);
+
+    float *receivedArray = reinterpret_cast<float*>(message->payload);
+    unsigned int receivedSize = message->payloadlen/sizeof(float);
+
+    featuresFile << receivedSize << endl; // Write the size for the reader
+    for (unsigned int i = 0 ; i < receivedSize ; ++i) // Write the data
+    {
+        featuresFile << receivedArray[i] << endl;
+    }
 
     featuresFile.close();
-    receivedFile.close();
 }
