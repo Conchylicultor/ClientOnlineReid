@@ -34,9 +34,12 @@ class Features
 {
 public:
     static void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2);
-    static void extractArray(const float* &array,
-                             const size_t &sizeArray,
+    static void extractArray(const float *array,
+                             const size_t sizeArray,
                              vector<FeaturesElement> &listFeatures);
+
+private:
+    static unsigned int sizeElementArray;
 };
 
 #endif // FEATURES_H

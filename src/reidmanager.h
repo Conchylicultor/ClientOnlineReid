@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "features.h"
+
 using namespace std;
 
 class ReidManager
@@ -15,6 +17,7 @@ public:
 
 private:
     string getNextSeqString() const;
+    float *reconstructArray(const string &seqId, size_t &sizeOut) const;
 };
 
 #endif // REIDMANAGER_H

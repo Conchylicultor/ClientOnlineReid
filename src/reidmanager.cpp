@@ -13,6 +13,7 @@ ReidManager::ReidManager()
 
 void ReidManager::computeNext()
 {
+    // Get the next received sequence
     string nextSeqString = getNextSeqString();
     if(nextSeqString.empty())
     {
@@ -20,26 +21,14 @@ void ReidManager::computeNext()
     }
 
     cout << "Compute: " << nextSeqString << endl;
-    ifstream seqFile("../../Data/Received/seq" + nextSeqString + ".txt", ios_base::in);
-    if(!seqFile.is_open())
-    {
-        cout << "Unable to open the sequence file (please, check your working directory)" << endl;
-        return;
-    }
 
-    size_t arrayReceivedSize = 0;
-    float *arrayReceived = nullptr;
+    size_t sizeArray = 0;
+    float *arrayReceived = reconstructArray(nextSeqString, sizeArray);
 
-    seqFile >> arrayReceivedSize;
+    // Extractions on the features
 
-    arrayReceived = new float[arrayReceivedSize];
-
-
-    for(size_t i = 0 ; i < arrayReceivedSize ; ++i)
-    {
-        seqFile >> arrayReceived[i];
-        cout << arrayReceived[i] << endl;
-    }
+    vector<FeaturesElement> listCurrentSequenceFeatures;
+    Features::extractArray(arrayReceived, sizeArray, listCurrentSequenceFeatures);
 
     delete arrayReceived;
 }
@@ -92,4 +81,31 @@ string ReidManager::getNextSeqString() const
     }
 
     return nextSeqString;
+}
+
+float *ReidManager::reconstructArray(const string &seqId, size_t &sizeOut) const
+{
+    // Extraction of the received array
+    ifstream seqFile("../../Data/Received/seq" + seqId + ".txt", ios_base::in);
+    if(!seqFile.is_open())
+    {
+        cout << "Unable to open the sequence file (please, check your working directory)" << endl;
+        return nullptr;
+    }
+
+    size_t arrayReceivedSize = 0;
+    float *arrayReceived = nullptr;
+
+    seqFile >> arrayReceivedSize;
+
+    arrayReceived = new float[arrayReceivedSize];
+
+
+    for(size_t i = 0 ; i < arrayReceivedSize ; ++i)
+    {
+        seqFile >> arrayReceived[i];
+    }
+
+    sizeOut = arrayReceivedSize;
+    return arrayReceived;
 }
