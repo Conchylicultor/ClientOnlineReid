@@ -6,9 +6,11 @@
 
 using namespace std;
 
+static const float thresholdValueSamePerson = 0.5;
+
 ReidManager::ReidManager()
 {
-
+    Features::getInstance();
 }
 
 void ReidManager::computeNext()
@@ -28,9 +30,44 @@ void ReidManager::computeNext()
     // Extractions on the features
 
     vector<FeaturesElement> listCurrentSequenceFeatures;
-    Features::extractArray(arrayReceived, sizeArray, listCurrentSequenceFeatures);
+    Features::getInstance().extractArray(arrayReceived, sizeArray, listCurrentSequenceFeatures);
 
     delete arrayReceived;
+
+    // Match with the dataset
+
+    bool newPers = true; // Not recognize yet
+
+    for(PersonElement currentPers : database)
+    {
+        float meanPrediction = 0.0;
+        for(FeaturesElement featuresDatabase : currentPers.features)
+        {
+            for(FeaturesElement featuresSequence : listCurrentSequenceFeatures)
+            {
+                meanPrediction += Features::getInstance().computeDistance(featuresDatabase, featuresSequence);
+            }
+        }
+        meanPrediction /= (currentPers.features.size() * listCurrentSequenceFeatures.size());
+
+        // Match. Update database ?
+        if(meanPrediction > thresholdValueSamePerson)
+        {
+            cout << "Match (" << meanPrediction << ") : " << currentPers.name << endl;
+            newPers = false;
+        }
+    }
+
+    // No match
+    if(newPers)
+    {
+        cout << "No match: Add the new person to the dataset" << endl;
+
+        // Add the new person to the database
+        database.push_back(PersonElement());
+        database.back().features.swap(listCurrentSequenceFeatures);
+        database.back().name = std::to_string(database.size());
+    }
 }
 
 string ReidManager::getNextSeqString() const

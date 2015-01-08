@@ -33,13 +33,20 @@ struct FeaturesElement
 class Features
 {
 public:
-    static void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2);
-    static void extractArray(const float *array,
-                             const size_t sizeArray,
-                             vector<FeaturesElement> &listFeatures);
+    static Features &getInstance();
+
+    float computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2);
+    void extractArray(const float *array,
+                      const size_t sizeArray,
+                      vector<FeaturesElement> &listFeatures);
 
 private:
-    static unsigned int sizeElementArray;
+    Features();
+
+    int sizeElementArray;
+
+    void loadMachineLearning();
+    CvSVM svm;
 };
 
 #endif // FEATURES_H
