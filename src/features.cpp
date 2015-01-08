@@ -22,7 +22,43 @@ Features::Features() :
 
 float Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2)
 {
-    return 0.0;
+    const int dimentionFeatureVector = 3 // Histogram
+                                     + NB_MAJOR_COLORS_KEEP; // Major colors
+    Mat rowFeatureVector = cv::Mat::ones(1, dimentionFeatureVector, CV_32FC1);
+
+    int currentIndexFeature = 0;// Usefull if I change the order or remove a feature (don't need to change all the index)
+
+    // Histogram
+
+    rowFeatureVector.at<float>(0, currentIndexFeature+0) = compareHist(elem1.histogramChannels.at(0), elem2.histogramChannels.at(0), CV_COMP_BHATTACHARYYA);
+    rowFeatureVector.at<float>(0, currentIndexFeature+1) = compareHist(elem1.histogramChannels.at(1), elem2.histogramChannels.at(1), CV_COMP_BHATTACHARYYA);
+    rowFeatureVector.at<float>(0, currentIndexFeature+2) = compareHist(elem1.histogramChannels.at(2), elem2.histogramChannels.at(2), CV_COMP_BHATTACHARYYA);
+    currentIndexFeature += 3;
+
+    // Major Colors
+
+    // Compute only with the most weigthed on
+    for (size_t i = 0; i < NB_MAJOR_COLORS_KEEP; ++i)
+    {
+        float minDist = norm(elem1.majorColors.at(i).color - elem2.majorColors.front().color);
+        float dist = 0.0;
+        for (size_t j = 0; j < NB_MAJOR_COLORS_KEEP; ++j)
+        {
+            dist = norm(elem1.majorColors.at(i).color - elem2.majorColors.at(j).color);
+            if(dist < minDist)
+            {
+                minDist = dist;
+            }
+        }
+        rowFeatureVector.at<float>(0,currentIndexFeature) = minDist;
+        currentIndexFeature++;
+    }
+
+    // TODO: Add feature: camera id ; Add feature: time
+
+    // Feature Scaling
+
+    return svm.predict(rowFeatureVector);
 }
 
 void Features::extractArray(const float *array, const size_t sizeArray, vector<FeaturesElement> &listFeatures)
@@ -45,7 +81,7 @@ void Features::extractArray(const float *array, const size_t sizeArray, vector<F
         // Histogram
         for(size_t channelId = 0 ; channelId < 3 ; ++channelId)
         {
-            currentElem.histogramChannels.at(channelId).create(1,100,CV_32FC3); // TODO: Check order x,y !!!!!!!
+            currentElem.histogramChannels.at(channelId).create(1,100,CV_32F); // TODO: Check order x,y !!!!!!!
             for(size_t i = 0 ; i < HIST_SIZE ; ++i)
             {
                 currentElem.histogramChannels.at(channelId).at<float>(i) = array[currentId];
