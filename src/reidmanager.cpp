@@ -29,8 +29,11 @@ void ReidManager::computeNext()
 
     // Extractions on the features
 
+    float hashSeqId = arrayReceived[0]; // Get the id of the sequence
+
     vector<FeaturesElement> listCurrentSequenceFeatures;
-    Features::getInstance().extractArray(arrayReceived, sizeArray, listCurrentSequenceFeatures);
+    size_t offset = 1;
+    Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
 
     delete arrayReceived;
 
