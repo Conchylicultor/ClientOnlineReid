@@ -99,8 +99,6 @@ void Features::extractArray(const float *array, const size_t sizeArray, vector<F
             }
         }
     }
-
-    cout << listFeatures.size() << endl;
 }
 
 void Features::loadMachineLearning()

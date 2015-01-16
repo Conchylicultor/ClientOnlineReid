@@ -5,7 +5,7 @@
 #include <string>
 
 using namespace std;
-#define ADDRESS     "192.168.200.11"
+#define ADDRESS     "133.5.19.83"
 #define CLIENTID    "ClientReidentification"
 
 const string protocolVersionTopic = "reid_client/protocol_version";
