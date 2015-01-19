@@ -16,6 +16,7 @@ int main()
     while (1) {
         exchangeManager.loop();
         reidentificationManager.computeNext();
+        reidentificationManager.eventHandler();
     }
     return 0;
 }

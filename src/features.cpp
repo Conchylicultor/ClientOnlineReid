@@ -22,9 +22,23 @@ Features::Features() :
 
 float Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2)
 {
+    Mat rowFeatureVector;
+
+    computeDistance(elem1, elem2, rowFeatureVector);
+
+    return svm.predict(rowFeatureVector);
+}
+
+float Features::computeDistance(const Mat &rowFeatureVector)
+{
+    return svm.predict(rowFeatureVector);
+}
+
+void Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector)
+{
     const int dimentionFeatureVector = 3 // Histogram
                                      + NB_MAJOR_COLORS_KEEP; // Major colors
-    Mat rowFeatureVector = cv::Mat::ones(1, dimentionFeatureVector, CV_32FC1);
+    rowFeatureVector = cv::Mat::ones(1, dimentionFeatureVector, CV_32FC1);
 
     int currentIndexFeature = 0;// Usefull if I change the order or remove a feature (don't need to change all the index)
 
@@ -57,8 +71,6 @@ float Features::computeDistance(const FeaturesElement &elem1, const FeaturesElem
     // TODO: Add feature: camera id ; Add feature: time
 
     // Feature Scaling
-
-    return svm.predict(rowFeatureVector);
 }
 
 void Features::extractArray(const float *array, const size_t sizeArray, vector<FeaturesElement> &listFeatures)
@@ -104,7 +116,7 @@ void Features::extractArray(const float *array, const size_t sizeArray, vector<F
 void Features::loadMachineLearning()
 {
     // Loading file
-    FileStorage fileTraining("../../Data/Received/training.yml", FileStorage::READ);
+    FileStorage fileTraining("../../Data/Training/training.yml", FileStorage::READ);
 
     if(!fileTraining.isOpened())
     {

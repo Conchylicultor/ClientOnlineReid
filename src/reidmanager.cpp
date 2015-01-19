@@ -2,15 +2,29 @@
 
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <ctime>
 #include <list>
 
 using namespace std;
 
 static const float thresholdValueSamePerson = 0.5;
 
-ReidManager::ReidManager()
+struct ElemTraining
 {
-    Features::getInstance();
+    unsigned int idPers1; // index in the dataset
+    unsigned int valuePers1; // feature of the person
+    unsigned int idPers2;
+    unsigned int valuePers2;
+
+    int same; // Positive or negative sample
+};
+
+ReidManager::ReidManager() : currentMode(ReidMode::TRAINING)
+{
+    Features::getInstance(); // Initialize the features (train the svm,...)
+    std::srand ( unsigned ( std::time(0) ) );
+    namedWindow("MainWindow", WINDOW_NORMAL);
 }
 
 void ReidManager::computeNext()
@@ -37,39 +51,84 @@ void ReidManager::computeNext()
 
     delete arrayReceived;
 
-    // Match with the dataset
-
-    bool newPers = true; // Not recognize yet
-
-    for(PersonElement currentPers : database)
+    if(currentMode == ReidMode::TRAINING || currentMode == ReidMode::TESTING) // For computing or evaluate the result of our binary classifier
     {
-        float meanPrediction = 0.0;
-        for(FeaturesElement featuresDatabase : currentPers.features)
+        // We simply add the person to the dataset
+
+        bool newPers = true; // Not found yet
+
+        for(PersonElement currentPers : database)
         {
-            for(FeaturesElement featuresSequence : listCurrentSequenceFeatures)
+            if(currentPers.hashId == hashSeqId)
             {
-                meanPrediction += Features::getInstance().computeDistance(featuresDatabase, featuresSequence);
+                currentPers.features.insert(currentPers.features.end(), listCurrentSequenceFeatures.begin(), listCurrentSequenceFeatures.end());
+                newPers = false;
             }
         }
-        meanPrediction /= (currentPers.features.size() * listCurrentSequenceFeatures.size());
 
-        // Match. Update database ?
-        if(meanPrediction > thresholdValueSamePerson)
+        // No match
+        if(newPers)
         {
-            cout << "Match (" << meanPrediction << ") : " << currentPers.name << endl;
-            newPers = false;
+            // Add the new person to the database
+            database.push_back(PersonElement());
+            database.back().features.swap(listCurrentSequenceFeatures);
+            database.back().name = std::to_string(hashSeqId);
+            database.back().hashId = hashSeqId;
         }
     }
-
-    // No match
-    if(newPers)
+    else if(currentMode == ReidMode::RELEASE)
     {
-        cout << "No match: Add the new person to the dataset" << endl;
+        // Match with the dataset
 
-        // Add the new person to the database
-        database.push_back(PersonElement());
-        database.back().features.swap(listCurrentSequenceFeatures);
-        database.back().name = std::to_string(database.size());
+        bool newPers = true; // Not recognize yet
+
+        for(PersonElement currentPers : database)
+        {
+            float meanPrediction = 0.0;
+            for(FeaturesElement featuresDatabase : currentPers.features)
+            {
+                for(FeaturesElement featuresSequence : listCurrentSequenceFeatures)
+                {
+                    meanPrediction += Features::getInstance().computeDistance(featuresDatabase, featuresSequence);
+                }
+            }
+            meanPrediction /= (currentPers.features.size() * listCurrentSequenceFeatures.size());
+
+            // Match. Update database ?
+            if(meanPrediction > thresholdValueSamePerson)
+            {
+                cout << "Match (" << meanPrediction << ") : " << currentPers.name << endl;
+                newPers = false;
+            }
+        }
+
+        // No match
+        if(newPers)
+        {
+            cout << "No match: Add the new person to the dataset" << endl;
+
+            // Add the new person to the database
+            database.push_back(PersonElement());
+            database.back().features.swap(listCurrentSequenceFeatures);
+            database.back().name = std::to_string(database.size());
+        }
+    }
+}
+
+void ReidManager::eventHandler()
+{
+    char key = waitKey(10);
+    if(key == 't')
+    {
+        cout << "Creating the training set (from the received data)..." << endl;
+        recordTrainingSet();
+        cout << "Done" << endl;
+    }
+    if(key == 'g')
+    {
+        cout << "Testing the received data..." << endl;
+        testingTestingSet();
+        cout << "Done" << endl;
     }
 }
 
@@ -148,4 +207,126 @@ float *ReidManager::reconstructArray(const string &seqId, size_t &sizeOut) const
 
     sizeOut = arrayReceivedSize;
     return arrayReceived;
+}
+
+void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
+{
+    vector<ElemTraining> listDataSet;
+
+    unsigned int idPers1 = 0;
+    for(PersonElement currentPerson : database)
+    {
+        unsigned int nbSample = currentPerson.features.size() * 2; // Arbitrary number
+
+        // Positive samples
+        for(unsigned int i = 0 ; i < nbSample ; ++i)
+        {
+            unsigned int value1 = std::rand() % currentPerson.features.size();
+            unsigned int value2 = std::rand() % currentPerson.features.size();
+
+            if(value1 == value2)
+            {
+                --i;
+            }
+            else
+            {
+                listDataSet.push_back(ElemTraining());
+                listDataSet.back().idPers1 = idPers1;
+                listDataSet.back().idPers2 = idPers1;
+                listDataSet.back().valuePers1 = value1;
+                listDataSet.back().valuePers2 = value2;
+                listDataSet.back().same = 1; // Positive sample
+            }
+        }
+
+        // Negative samples
+        for(unsigned int i = 0 ; i < nbSample ; ++i)
+        {
+            unsigned int idPers2 = std::rand() % database.size();
+
+            if(idPers1 == idPers2)
+            {
+                --i;
+            }
+            else
+            {
+                unsigned int value1 = std::rand() % currentPerson.features.size();
+                unsigned int value2 = std::rand() % database.at(idPers2).features.size();
+
+                listDataSet.push_back(ElemTraining());
+                listDataSet.back().idPers1 = idPers1;
+                listDataSet.back().idPers2 = idPers2;
+                listDataSet.back().valuePers1 = value1;
+                listDataSet.back().valuePers2 = value2;
+                listDataSet.back().same = -1; // Negative sample
+            }
+        }
+
+        ++idPers1;
+    }
+
+    // Randomize
+    std::random_shuffle(listDataSet.begin(), listDataSet.end());
+
+    for(ElemTraining currentSetElem : listDataSet)
+    {
+        Mat rowFeatureVector;
+        Features::getInstance().computeDistance(database.at(currentSetElem.idPers1).features.at(currentSetElem.valuePers1),
+                                                database.at(currentSetElem.idPers2).features.at(currentSetElem.valuePers2),
+                                                rowFeatureVector);
+
+        Mat rowClass = cv::Mat::ones(1, 1, CV_32FC1);
+        rowClass.at<float>(0,0) = currentSetElem.same;
+
+        dataSet.push_back(rowFeatureVector);
+        classesSet.push_back(rowClass);
+    }
+}
+
+void ReidManager::recordTrainingSet()
+{
+    Mat trainingData;
+    Mat trainingClasses;
+
+    selectPairs(trainingData, trainingClasses);
+
+    // Record the training data
+    FileStorage fileTraining("../../Data/Training/training.yml", FileStorage::WRITE);
+
+    fileTraining << "trainingData" << trainingData;
+    fileTraining << "trainingClasses" << trainingClasses;
+
+    fileTraining.release();
+}
+
+void ReidManager::testingTestingSet()
+{
+    Mat trainingData;
+    Mat trainingClasses;
+
+    selectPairs(trainingData, trainingClasses);
+
+    float successRate = 0.0;
+    for(size_t i = 0 ; i < static_cast<unsigned>(trainingData.rows) ; ++i)
+    {
+        // Test SVM
+        float result = Features::getInstance().computeDistance(trainingData.row(i));
+
+        // Compare result with expected
+        if(result == trainingClasses.at<float>(i))
+        {
+            successRate += 1.0;
+        }
+    }
+
+    // Show the result
+    if(trainingData.rows > 0)
+    {
+        successRate /= trainingData.rows;
+        cout << "Success rate: " << successRate * 100.0 << "%" << endl;
+    }
+    else
+    {
+        cout << "Error: no data (database empty)" << endl;
+    }
 }

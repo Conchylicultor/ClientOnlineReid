@@ -36,6 +36,8 @@ public:
     static Features &getInstance();
 
     float computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2);
+    float computeDistance(const Mat &rowFeatureVector);
+    void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector);
     void extractArray(const float *array,
                       const size_t sizeArray,
                       vector<FeaturesElement> &listFeatures);
