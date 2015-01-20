@@ -20,11 +20,12 @@ struct ElemTraining
     int same; // Positive or negative sample
 };
 
-ReidManager::ReidManager() : currentMode(ReidMode::TRAINING)
+ReidManager::ReidManager()
 {
     Features::getInstance(); // Initialize the features (train the svm,...)
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
+    setMode(ReidMode::TESTING); // Default mode
 }
 
 void ReidManager::computeNext()
@@ -51,7 +52,7 @@ void ReidManager::computeNext()
 
     delete arrayReceived;
 
-    if(currentMode == ReidMode::TRAINING || currentMode == ReidMode::TESTING) // For computing or evaluate the result of our binary classifier
+    if(currentMode == ReidMode::TRAINING) // For computing or evaluate the result of our binary classifier
     {
         // We simply add the person to the dataset
 
@@ -76,7 +77,7 @@ void ReidManager::computeNext()
             database.back().hashId = hashSeqId;
         }
     }
-    else if(currentMode == ReidMode::RELEASE)
+    else if(currentMode == ReidMode::RELEASE || currentMode == ReidMode::TESTING)
     {
         // Match with the dataset
 
@@ -118,13 +119,29 @@ void ReidManager::computeNext()
 void ReidManager::eventHandler()
 {
     char key = waitKey(10);
-    if(key == 't')
+    if(key == 's')
+    {
+        cout << "Switch mode..." << endl;
+        if(currentMode == ReidMode::RELEASE)
+        {
+            setMode(ReidMode::TRAINING);
+        }
+        else if(currentMode == ReidMode::TRAINING)
+        {
+            setMode(ReidMode::TESTING);
+        }
+        else if(currentMode == ReidMode::TESTING)
+        {
+            setMode(ReidMode::RELEASE);
+        }
+    }
+    else if(key == 't' && currentMode == ReidMode::TRAINING)
     {
         cout << "Creating the training set (from the received data)..." << endl;
         recordTrainingSet();
         cout << "Done" << endl;
     }
-    if(key == 'g')
+    else if(key == 'g' && currentMode == ReidMode::TRAINING)
     {
         cout << "Testing the received data..." << endl;
         testingTestingSet();
@@ -329,4 +346,25 @@ void ReidManager::testingTestingSet()
     {
         cout << "Error: no data (database empty)" << endl;
     }
+}
+
+void ReidManager::setMode(const ReidMode &newMode)
+{
+    currentMode = newMode;
+    cout << "Selected mode: ";
+    if(currentMode == ReidMode::RELEASE)
+    {
+        cout << "release";
+    }
+    else if(currentMode == ReidMode::TRAINING)
+    {
+        cout << "training";
+    }
+    else if(currentMode == ReidMode::TESTING)
+    {
+        cout << "testing";
+    }
+    cout << endl;
+    // TODO: Clear database ?
+    // TODO: Reload svm ?
 }

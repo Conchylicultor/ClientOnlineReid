@@ -35,6 +35,8 @@ private:
     void recordTrainingSet();
     void testingTestingSet();
 
+    void setMode(const ReidMode &newMode);
+
     ReidMode currentMode;
     vector<PersonElement> database;
 };
