@@ -25,7 +25,9 @@ ReidManager::ReidManager()
     Features::getInstance(); // Initialize the features (train the svm,...)
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
+
     setMode(ReidMode::TESTING); // Default mode
+    listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
 }
 
 void ReidManager::computeNext()
@@ -37,7 +39,7 @@ void ReidManager::computeNext()
         return;
     }
 
-    cout << "Compute: " << nextSeqString << endl;
+    cout << "Compute sequence: " << nextSeqString << endl;
 
     size_t sizeArray = 0;
     float *arrayReceived = reconstructArray(nextSeqString, sizeArray);
@@ -79,6 +81,36 @@ void ReidManager::computeNext()
     }
     else if(currentMode == ReidMode::RELEASE || currentMode == ReidMode::TESTING)
     {
+        // For evaluation
+        bool alreadyInDataset = false;
+        bool isRecognizeOnce = false;
+        int nbErrorClone = 0;
+        if(currentMode == ReidMode::TESTING)
+        {
+            // Evaluation which contain the datas to plot
+            EvaluationElement newEvalElement;
+            // X
+            newEvalElement.nbSequence = listEvaluation.size() + 1;
+            // Y: Cumulative results
+            newEvalElement.nbError             = listEvaluation.back().nbError;
+            newEvalElement.nbSuccess           = listEvaluation.back().nbSuccess;
+            newEvalElement.nbErrorFalsePositiv = listEvaluation.back().nbErrorFalsePositiv;
+            newEvalElement.nbErrorFalseNegativ = listEvaluation.back().nbErrorFalseNegativ;
+            newEvalElement.nbErrorPersonAdded  = listEvaluation.back().nbErrorPersonAdded;
+            newEvalElement.nbErrorWithoutClone = listEvaluation.back().nbErrorWithoutClone;
+            newEvalElement.nbClone             = listEvaluation.back().nbClone;
+            newEvalElement.nbPersonAdded       = listEvaluation.back().nbPersonAdded;
+            listEvaluation.push_back(newEvalElement);
+
+            for(PersonElement currentPers : database)
+            {
+                if(currentPers.hashId == hashSeqId)
+                {
+                    alreadyInDataset = true;
+                }
+            }
+        }
+
         // Match with the dataset
 
         bool newPers = true; // Not recognize yet
@@ -98,8 +130,40 @@ void ReidManager::computeNext()
             // Match. Update database ?
             if(meanPrediction > thresholdValueSamePerson)
             {
-                cout << "Match (" << meanPrediction << ") : " << currentPers.name << endl;
+                cout << "Match (" << meanPrediction << ") : " << currentPers.hashId;
                 newPers = false;
+
+                if(currentMode == ReidMode::TESTING)
+                {
+                    if(currentPers.hashId != hashSeqId) // False positive
+                    {
+                        cout << " <<< ERROR";
+
+                        listEvaluation.back().nbError++;
+                        listEvaluation.back().nbErrorFalsePositiv++;
+                        listEvaluation.back().nbErrorWithoutClone++;
+                    }
+                    else
+                    {
+                        isRecognizeOnce = true; // At least once
+                    }
+                }
+
+                cout << endl;
+            }
+            else if(currentMode == ReidMode::TESTING)
+            {
+                cout << "Diff (" << meanPrediction << ")";
+
+                if (currentPers.hashId == hashSeqId) // False negative
+                {
+                    cout << " <<< ERROR";
+
+                    listEvaluation.back().nbError++;
+                    listEvaluation.back().nbErrorFalseNegativ++;
+                    nbErrorClone++;
+                }
+                cout << endl;
             }
         }
 
@@ -112,7 +176,27 @@ void ReidManager::computeNext()
             database.push_back(PersonElement());
             database.back().features.swap(listCurrentSequenceFeatures);
             database.back().name = std::to_string(database.size());
+            database.back().hashId = hashSeqId;
+
+            if(currentMode == ReidMode::TESTING)
+            {
+                listEvaluation.back().nbPersonAdded++;
+            }
         }
+
+        if(currentMode == ReidMode::TESTING)
+        {
+            if(alreadyInDataset && !isRecognizeOnce)
+            {
+                listEvaluation.back().nbErrorWithoutClone += nbErrorClone;
+            }
+
+            if(alreadyInDataset && newPers)
+            {
+                listEvaluation.back().nbClone++;
+            }
+        }
+
     }
 }
 
@@ -145,6 +229,12 @@ void ReidManager::eventHandler()
     {
         cout << "Testing the received data..." << endl;
         testingTestingSet();
+        cout << "Done" << endl;
+    }
+    else if(key == 'e' && currentMode == ReidMode::TESTING)
+    {
+        cout << "Plot the evaluation data..." << endl;
+        plotEvaluation();
         cout << "Done" << endl;
     }
 }
@@ -224,6 +314,27 @@ float *ReidManager::reconstructArray(const string &seqId, size_t &sizeOut) const
 
     sizeOut = arrayReceivedSize;
     return arrayReceived;
+}
+
+void ReidManager::setMode(const ReidMode &newMode)
+{
+    currentMode = newMode;
+    cout << "Selected mode: ";
+    if(currentMode == ReidMode::RELEASE)
+    {
+        cout << "release";
+    }
+    else if(currentMode == ReidMode::TRAINING)
+    {
+        cout << "training";
+    }
+    else if(currentMode == ReidMode::TESTING)
+    {
+        cout << "testing";
+    }
+    cout << endl;
+    // TODO: Clear database ?
+    // TODO: Reload svm ?
 }
 
 void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
@@ -348,23 +459,74 @@ void ReidManager::testingTestingSet()
     }
 }
 
-void ReidManager::setMode(const ReidMode &newMode)
+void ReidManager::plotEvaluation()
 {
-    currentMode = newMode;
-    cout << "Selected mode: ";
-    if(currentMode == ReidMode::RELEASE)
+    const int stepHorizontalAxis = 20;
+    const int stepVerticalAxis = 20;
+    const int windowsEvalHeight = 900;
+
+    Mat imgEval(Size(stepHorizontalAxis * listEvaluation.size(), windowsEvalHeight),
+                CV_8UC3,
+                Scalar(0,0,0));
+
+    for(size_t i = 1 ; i < listEvaluation.size() ; ++i)
     {
-        cout << "release";
+        EvaluationElement evalElemPrev = listEvaluation.at(i-1);
+        EvaluationElement evalElemNext = listEvaluation.at(i);
+
+        Point pt1;
+        Point pt2;
+        pt1.x = stepHorizontalAxis * evalElemPrev.nbSequence;
+        pt2.x = stepHorizontalAxis * evalElemNext.nbSequence;
+
+        Scalar color;
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbPersonAdded;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbPersonAdded;
+        color = Scalar(255, 0, 0);
+        putText(imgEval, "Person added", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbError;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbError;
+        color = Scalar(0, 255, 0);
+        putText(imgEval, "Errors (Cumulativ)", Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalseNegativ;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalseNegativ;
+        color = Scalar(0, 255, 255);
+        putText(imgEval, "False negativ", Point(10, 40), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalsePositiv;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalsePositiv;
+        color = Scalar(0, 130, 255);
+        putText(imgEval, "False positiv", Point(10, 50), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorWithoutClone;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorWithoutClone;
+        color = Scalar(115, 32, 150);
+        putText(imgEval, "Without clone", Point(10, 60), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbClone;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbClone;
+        color = Scalar(73, 92, 17);
+        putText(imgEval, "Clones", Point(10, 70), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbError - evalElemPrev.nbError);
+        pt2.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbError - evalElemPrev.nbError);
+        color = Scalar(255, 255, 0);
+        putText(imgEval, "Errors", Point(10, 10), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
     }
-    else if(currentMode == ReidMode::TRAINING)
-    {
-        cout << "training";
-    }
-    else if(currentMode == ReidMode::TESTING)
-    {
-        cout << "testing";
-    }
-    cout << endl;
-    // TODO: Clear database ?
-    // TODO: Reload svm ?
+
+    // Display
+    namedWindow("Evaluation Results", CV_WINDOW_AUTOSIZE);
+    imshow("Evaluation Results", imgEval);
+
+    //waitKey();
 }
