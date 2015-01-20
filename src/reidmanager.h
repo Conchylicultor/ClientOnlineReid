@@ -16,7 +16,7 @@ struct PersonElement
 {
     vector<FeaturesElement> features;
     string name;
-    int hashId;
+    size_t hashId;
 };
 
 class ReidManager

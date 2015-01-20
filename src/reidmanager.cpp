@@ -43,7 +43,7 @@ void ReidManager::computeNext()
 
     // Extractions on the features
 
-    float hashSeqId = arrayReceived[0]; // Get the id of the sequence
+    size_t hashSeqId = static_cast<size_t>(arrayReceived[0]); // Get the id of the sequence
 
     vector<FeaturesElement> listCurrentSequenceFeatures;
     size_t offset = 1;
