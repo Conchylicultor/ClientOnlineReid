@@ -122,7 +122,7 @@ void ReidManager::computeNext()
             {
                 for(FeaturesElement featuresSequence : listCurrentSequenceFeatures)
                 {
-                    meanPrediction += Features::getInstance().computeDistance(featuresDatabase, featuresSequence);
+                    meanPrediction += Features::getInstance().predict(featuresDatabase, featuresSequence);
                 }
             }
             meanPrediction /= (currentPers.features.size() * listCurrentSequenceFeatures.size());
@@ -401,7 +401,7 @@ void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
         Mat rowFeatureVector;
         Features::getInstance().computeDistance(database.at(currentSetElem.idPers1).features.at(currentSetElem.valuePers1),
                                                 database.at(currentSetElem.idPers2).features.at(currentSetElem.valuePers2),
-                                                rowFeatureVector);
+                                                rowFeatureVector); // No scaling yet (wait that all data are received)
 
         Mat rowClass = cv::Mat::ones(1, 1, CV_32FC1);
         rowClass.at<float>(0,0) = currentSetElem.same;
@@ -416,41 +416,91 @@ void ReidManager::recordTrainingSet()
     Mat trainingData;
     Mat trainingClasses;
 
+    // Create a training set (from the received data)
     selectPairs(trainingData, trainingClasses);
+
+    if(trainingData.rows == 0)
+    {
+        cout << "Error: training set empty" << endl;
+        return;
+    }
+
+    // Compute scaling factors
+    Mat scaleFactors(1, trainingData.cols, CV_32FC1);
+
+    // We compute the scaling factor for each dimention
+    for(size_t i = 0 ; i < static_cast<unsigned>(trainingData.cols) ; ++i)
+    {
+        float maxValue = 0.0;
+        for(size_t j = 0 ; j < static_cast<unsigned>(trainingData.rows) ; ++j)
+        {
+            float currentValue = trainingData.at<float>(j,i); // Accessing by (row,col)
+            if(currentValue > maxValue)
+            {
+                maxValue = currentValue;
+            }
+        }
+
+        // Warning if maxValue == 0
+        if(maxValue < 0.00001) // Floating value => no strict equality
+        {
+            cout << "Warning: No scaling for the param " << i << endl;
+            maxValue = 1.0; // No scaling in this case
+        }
+
+        scaleFactors.at<float>(0,i) = maxValue;
+    }
+
+    // Debug
+    cout << "Scale factors computed:" << endl;
+    for(size_t i = 0 ; i < static_cast<unsigned>(trainingData.cols) ; ++i)
+    {
+        cout << scaleFactors.at<float>(0,i) << endl;
+    }
+
+    // Set scale factor to the feature
+    Features::getInstance().setScaleFactors(scaleFactors);
+
+    // Scale
+    for(size_t i = 0 ; i < static_cast<unsigned>(trainingData.rows) ; ++i)
+    {
+        Features::getInstance().scaleRow(trainingData.row(i)); // Now the row is scaled
+    }
 
     // Record the training data
     FileStorage fileTraining("../../Data/Training/training.yml", FileStorage::WRITE);
 
     fileTraining << "trainingData" << trainingData;
     fileTraining << "trainingClasses" << trainingClasses;
+    fileTraining << "scaleFactors" << scaleFactors;
 
     fileTraining.release();
 }
 
 void ReidManager::testingTestingSet()
 {
-    Mat trainingData;
-    Mat trainingClasses;
+    Mat testingData;
+    Mat testingClasses;
 
-    selectPairs(trainingData, trainingClasses);
+    selectPairs(testingData, testingClasses);
 
     float successRate = 0.0;
-    for(size_t i = 0 ; i < static_cast<unsigned>(trainingData.rows) ; ++i)
+    for(size_t i = 0 ; i < static_cast<unsigned>(testingData.rows) ; ++i)
     {
         // Test SVM
-        float result = Features::getInstance().computeDistance(trainingData.row(i));
+        float result = Features::getInstance().predictRow(testingData.row(i)); // Now the row is scaled
 
-        // Compare result with expected
-        if(result == trainingClasses.at<float>(i))
+        // Compare result with the one expected
+        if(result == testingClasses.at<float>(i))
         {
             successRate += 1.0;
         }
     }
 
     // Show the result
-    if(trainingData.rows > 0)
+    if(testingData.rows > 0)
     {
-        successRate /= trainingData.rows;
+        successRate /= testingData.rows;
         cout << "Success rate: " << successRate * 100.0 << "%" << endl;
     }
     else

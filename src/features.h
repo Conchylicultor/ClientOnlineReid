@@ -35,12 +35,15 @@ class Features
 public:
     static Features &getInstance();
 
-    float computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2);
-    float computeDistance(const Mat &rowFeatureVector);
-    void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector);
+    float predict(const FeaturesElement &elem1, const FeaturesElement &elem2) const;
+    float predictRow(Mat rowFeatureVector) const; // The feature vector will be scaled
+    void scaleRow(Mat rowFeatureVector) const;
+    void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector) const;
     void extractArray(const float *array,
                       const size_t sizeArray,
-                      vector<FeaturesElement> &listFeatures);
+                      vector<FeaturesElement> &listFeatures) const;
+
+    void setScaleFactors(const Mat &newValue);
 
 private:
     Features();
@@ -49,6 +52,8 @@ private:
 
     void loadMachineLearning();
     CvSVM svm;
+
+    Mat scaleFactors;
 };
 
 #endif // FEATURES_H

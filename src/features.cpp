@@ -20,21 +20,32 @@ Features::Features() :
     loadMachineLearning();
 }
 
-float Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2)
+float Features::predict(const FeaturesElement &elem1, const FeaturesElement &elem2) const
 {
     Mat rowFeatureVector;
 
     computeDistance(elem1, elem2, rowFeatureVector);
 
-    return svm.predict(rowFeatureVector);
+    return predictRow(rowFeatureVector); // Scale and predict
 }
 
-float Features::computeDistance(const Mat &rowFeatureVector)
+float Features::predictRow(Mat rowFeatureVector) const
 {
+    // Scale
+    scaleRow(rowFeatureVector);
     return svm.predict(rowFeatureVector);
 }
 
-void Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector)
+void Features::scaleRow(Mat rowFeatureVector) const
+{
+    // Simple scale by dividing by maxValue
+    for(size_t i = 0 ; i < static_cast<unsigned>(rowFeatureVector.cols) ; ++i)
+    {
+        rowFeatureVector.at<float>(i) /= scaleFactors.at<float>(0,i);
+    }
+}
+
+void Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector) const
 {
     const int dimentionFeatureVector = 3 // Histogram
                                      + NB_MAJOR_COLORS_KEEP; // Major colors
@@ -70,10 +81,10 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
 
     // TODO: Add feature: camera id ; Add feature: time
 
-    // Feature Scaling
+    // The feature scaling is not made in this function
 }
 
-void Features::extractArray(const float *array, const size_t sizeArray, vector<FeaturesElement> &listFeatures)
+void Features::extractArray(const float *array, const size_t sizeArray, vector<FeaturesElement> &listFeatures) const
 {
     // No offset
 
@@ -113,6 +124,11 @@ void Features::extractArray(const float *array, const size_t sizeArray, vector<F
     }
 }
 
+void Features::setScaleFactors(const Mat &newValue)
+{
+    scaleFactors = newValue;
+}
+
 void Features::loadMachineLearning()
 {
     // Loading file
@@ -124,6 +140,10 @@ void Features::loadMachineLearning()
         exit(0);
     }
 
+    // Loading the scales factors
+    fileTraining["scaleFactors"] >> scaleFactors;
+
+    // Loading the scale training set
     Mat trainingData;
     Mat trainingClasses;
     fileTraining["trainingData"]    >> trainingData;
