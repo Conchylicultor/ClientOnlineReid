@@ -8,7 +8,7 @@
 
 using namespace std;
 
-static const float thresholdValueSamePerson = 0.5;
+static const float thresholdValueSamePerson = 0.21;
 
 struct ElemTraining
 {
@@ -46,11 +46,12 @@ void ReidManager::computeNext()
 
     // Extractions on the features
 
-    size_t hashSeqId = static_cast<size_t>(arrayReceived[0]); // Get the id of the sequence
+    size_t hashSeqId = reinterpret_cast<size_t&>(arrayReceived[0]); // Get the id of the sequence
 
     vector<FeaturesElement> listCurrentSequenceFeatures;
-    size_t offset = 1;
+    size_t offset = 8; // The other ofsets values are extracted on the next function
     Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
+    // TODO: Features::getInstance().extractAddInfo(arrayReceived, listCurrentSequenceFeatures);
 
     delete arrayReceived;
 
@@ -307,9 +308,11 @@ float *ReidManager::reconstructArray(const string &seqId, size_t &sizeOut) const
     arrayReceived = new float[arrayReceivedSize];
 
 
+    int tempValue = 0;
     for(size_t i = 0 ; i < arrayReceivedSize ; ++i)
     {
-        seqFile >> arrayReceived[i];
+        seqFile >> tempValue;
+        arrayReceived[i] = reinterpret_cast<float&>(tempValue);
     }
 
     sizeOut = arrayReceivedSize;

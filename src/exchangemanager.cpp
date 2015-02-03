@@ -251,7 +251,8 @@ void ExchangeManager::onDataReceived(const mosquitto_message *message)
     featuresFile << receivedSize << endl; // Write the size for the reader
     for (unsigned int i = 0 ; i < receivedSize ; ++i) // Write the data
     {
-        featuresFile << receivedArray[i] << endl;
+        // We convert the value in int to avoid loss when we wrote the data
+        featuresFile << reinterpret_cast<int&>(receivedArray[i]) << endl;
     }
 
     featuresFile.close();
