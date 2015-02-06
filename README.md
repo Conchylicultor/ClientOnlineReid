@@ -18,8 +18,5 @@ In order to run the program, the folder ClientOnlineReid must contain a config.y
 
 ```
 %YAML:1.0
-brokerIp:'192.168.0.64'
-clientId:'ReidClient'
+brokerIp:'192.168.100.13'
 ```
-
-The clientId parameter is optional. The program will automatically attribute the id "ClientReidentification" if the parameter is not set.
