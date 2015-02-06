@@ -13,3 +13,13 @@ Multiple modes are proposed by this software:
 * __Training mode__: the program record all person with there correct identity. No recognition is made. This mode is used to generate the differents positive and negative samples in order to train our binary classifier.
 * __Testing mode__: Test our adaptative database and record the errors (kind, number,...)
 * __Release mode__: Same as training mode but without any kind of verification.
+
+In order to run the program, the folder ClientOnlineReid must contain a config.yml indicating the ip adress of the mqtt brocker:
+
+```
+%YAML:1.0
+brokerIp:'192.168.0.64'
+clientId:'ReidClient'
+```
+
+The clientId parameter is optional. The program will automatically attribute the id "ClientReidentification" if the parameter is not set.
