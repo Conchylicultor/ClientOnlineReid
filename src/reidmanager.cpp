@@ -248,7 +248,7 @@ string ReidManager::getNextSeqString() const
     ifstream receivedFileIn("../../Data/Received/received.txt", ios::in);
     if(!receivedFileIn.is_open())
     {
-        cout << "Unable to open the file (please, check your working directory)" << endl;
+        cout << "Unable to open the received file (please, check your working directory)" << endl;
     }
     else
     {
@@ -276,7 +276,7 @@ string ReidManager::getNextSeqString() const
         ofstream receivedFileOut("../../Data/Received/received.txt", ios::out | ios::trunc);
         if(!receivedFileOut.is_open())
         {
-            cout << "Unable to open the file (please, check your working directory)" << endl;
+            cout << "Unable to open the received file (please, check your working directory)" << endl;
         }
 
         for(string currentLine : filelines)

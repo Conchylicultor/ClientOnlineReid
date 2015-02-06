@@ -137,7 +137,7 @@ void Features::loadMachineLearning()
     if(!fileTraining.isOpened())
     {
         cout << "Error: cannot open the training file" << endl;
-        exit(0);
+        return; // No exit: we could be in training mode
     }
 
     // Loading the scales factors

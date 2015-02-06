@@ -3,10 +3,10 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include "opencv2/opencv.hpp"
 
 using namespace std;
-#define ADDRESS     "133.5.19.83"
-#define CLIENTID    "ClientReidentification"
+#define CLIENTID    "ReidClient"
 
 const string protocolVersionTopic = "reid_client/protocol_version";
 const string newCamTopic = "cam_clients/new_connection";
@@ -30,6 +30,21 @@ ExchangeManager::ExchangeManager() : mosqpp::mosquittopp()
 
     // Initialise the library
     mosqpp::lib_init();
+
+    // Loading the configuration
+    string brokerAdress;
+
+    cv::FileStorage fileConfig("../config.yml", cv::FileStorage::READ);
+    if(!fileConfig.isOpened())
+    {
+        cout << "Error: cannot open the configuration file" << endl;
+        exit(0);
+    }
+
+    fileConfig["brokerIp"] >> brokerAdress;
+
+    fileConfig.release();
+
 
     // Creating a client instance
     // /!\ Warning: Each client must have a UNIQUE id !!!
@@ -57,8 +72,8 @@ ExchangeManager::ExchangeManager() : mosqpp::mosquittopp()
     }
 
     // Connect the client to the broker.
-    // Please indicate the right IP address or server name
-    result = this->connect(ADDRESS);
+    cout << "Try connecting the reidentification client to the brocker..." << endl;
+    result = this->connect(brokerAdress.c_str());
     // Check the result
     switch (result)
     {
