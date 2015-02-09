@@ -5,6 +5,18 @@
 // Variables for features computation
 #define HIST_SIZE 100
 
+size_t reconstructHashcode(float *array)
+{
+    unsigned int leastSignificantBits = reinterpret_cast<unsigned int&>(array[0]);
+    unsigned int mostSignificantBits  = reinterpret_cast<unsigned int&>(array[1]);
+
+    size_t reconstructValue = mostSignificantBits;
+    reconstructValue <<= 32;
+    reconstructValue |= leastSignificantBits;
+
+    return reconstructValue;
+}
+
 Features &Features::getInstance()
 {
     static Features instance;

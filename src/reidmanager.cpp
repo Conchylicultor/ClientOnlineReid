@@ -26,7 +26,7 @@ ReidManager::ReidManager()
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
-    setMode(ReidMode::TESTING); // Default mode
+    setMode(ReidMode::TRAINING); // Default mode
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
 }
 
@@ -46,10 +46,10 @@ void ReidManager::computeNext()
 
     // Extractions on the features
 
-    size_t hashSeqId = reinterpret_cast<size_t&>(arrayReceived[0]); // Get the id of the sequence
+    size_t hashSeqId = reconstructHashcode(&arrayReceived[0]); // Get the id of the sequence
 
     vector<FeaturesElement> listCurrentSequenceFeatures;
-    size_t offset = 8; // The other ofsets values are extracted on the next function
+    size_t offset = 10; // The other ofsets values are extracted on the next function
     Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
     // TODO: Features::getInstance().extractAddInfo(arrayReceived, listCurrentSequenceFeatures);
 

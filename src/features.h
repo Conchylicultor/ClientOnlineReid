@@ -30,6 +30,8 @@ struct FeaturesElement
     array<MajorColorElem, NB_MAJOR_COLORS_EXTRACT> majorColors;
 };
 
+size_t reconstructHashcode(float *array); // Reconstruct the received hashcode from 2 float received in the array
+
 class Features
 {
 public:
