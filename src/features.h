@@ -26,11 +26,19 @@ struct MajorColorElem
 
 struct FeaturesElement
 {
+    // Frame attributes
     array<Mat, 3> histogramChannels;
     array<MajorColorElem, NB_MAJOR_COLORS_EXTRACT> majorColors;
+
+    // Global attributes
+    size_t hashCodeCameraId;
+    int beginDate;
+    int endDate;
+    cv::Vec2f entranceVector;
+    cv::Vec2f exitVector;
 };
 
-size_t reconstructHashcode(float *array); // Reconstruct the received hashcode from 2 float received in the array
+size_t reconstructHashcode(const float *array); // Reconstruct the received hashcode from 2 float received in the array
 
 class Features
 {
@@ -42,7 +50,7 @@ public:
     void scaleRow(Mat rowFeatureVector) const;
     void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector) const;
     void extractArray(const float *array,
-                      const size_t sizeArray,
+                      size_t sizeArray,
                       vector<FeaturesElement> &listFeatures) const;
 
     void setScaleFactors(const Mat &newValue);

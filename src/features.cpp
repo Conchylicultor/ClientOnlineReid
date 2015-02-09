@@ -5,10 +5,13 @@
 // Variables for features computation
 #define HIST_SIZE 100
 
-size_t reconstructHashcode(float *array)
+size_t reconstructHashcode(const float *array)
 {
-    unsigned int leastSignificantBits = reinterpret_cast<unsigned int&>(array[0]);
-    unsigned int mostSignificantBits  = reinterpret_cast<unsigned int&>(array[1]);
+    float castValue; // Avoid warning errors (cast a const)
+    castValue = array[0];
+    unsigned int leastSignificantBits = reinterpret_cast<unsigned int&>(castValue);
+    castValue = array[1];
+    unsigned int mostSignificantBits  = reinterpret_cast<unsigned int&>(castValue);
 
     size_t reconstructValue = mostSignificantBits;
     reconstructValue <<= 32;
@@ -96,22 +99,43 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
     // The feature scaling is not made in this function
 }
 
-void Features::extractArray(const float *array, const size_t sizeArray, vector<FeaturesElement> &listFeatures) const
+void Features::extractArray(const float *array, size_t sizeArray, vector<FeaturesElement> &listFeatures) const
 {
-    // No offset
-
+    // Test the validity
     if(array == nullptr)
     {
         return;
     }
 
-    size_t currentId = 0; // No offset
-    for(size_t numberElem = (sizeArray - currentId) / sizeElementArray ; // No offset currently
+    // Offset values (Global attributes)
+    size_t hashCodeCameraId = reconstructHashcode(&array[0]);
+    float castValue;
+    castValue = array[2];
+    int beginDate = reinterpret_cast<int&>(castValue);
+    castValue = array[3];
+    int endDate = reinterpret_cast<int&>(castValue);
+    cv::Vec2f entranceVector(array[4], array[5]);
+    cv::Vec2f exitVector(array[6], array[7]);
+
+    // Shift the origin to remove the offset
+    size_t offset = 8;
+    array = &array[offset];
+    sizeArray -= offset;
+
+    size_t currentId = 0; // No offset anymore
+    for(size_t numberElem = (sizeArray - currentId) / sizeElementArray; // Number of frame's feature send
         numberElem > 0 ;
         --numberElem)
     {
         listFeatures.push_back(FeaturesElement());
         FeaturesElement &currentElem = listFeatures.back();
+
+        // Copy the global attributes
+        currentElem.hashCodeCameraId = hashCodeCameraId;
+        currentElem.beginDate = beginDate;
+        currentElem.endDate = endDate;
+        currentElem.entranceVector = entranceVector;
+        currentElem.exitVector = exitVector;
 
         // Histogram
         for(size_t channelId = 0 ; channelId < 3 ; ++channelId)

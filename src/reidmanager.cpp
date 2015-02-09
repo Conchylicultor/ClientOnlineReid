@@ -49,9 +49,8 @@ void ReidManager::computeNext()
     size_t hashSeqId = reconstructHashcode(&arrayReceived[0]); // Get the id of the sequence
 
     vector<FeaturesElement> listCurrentSequenceFeatures;
-    size_t offset = 10; // The other ofsets values are extracted on the next function
+    size_t offset = 2; // The other ofsets values are extracted on the next function
     Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
-    // TODO: Features::getInstance().extractAddInfo(arrayReceived, listCurrentSequenceFeatures);
 
     delete arrayReceived;
 
