@@ -44,7 +44,7 @@ public:
     ReidManager();
 
     void computeNext();
-    void eventHandler();
+    bool eventHandler();
 
 private:
     string getNextSeqString() const;

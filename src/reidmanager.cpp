@@ -26,7 +26,7 @@ ReidManager::ReidManager()
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
-    setMode(ReidMode::TRAINING); // Default mode
+    setMode(ReidMode::TESTING); // Default mode
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
 }
 
@@ -200,7 +200,7 @@ void ReidManager::computeNext()
     }
 }
 
-void ReidManager::eventHandler()
+bool ReidManager::eventHandler()
 {
     char key = waitKey(10);
     if(key == 's')
@@ -237,6 +237,12 @@ void ReidManager::eventHandler()
         plotEvaluation();
         cout << "Done" << endl;
     }
+    else if(key == 'q')
+    {
+        cout << "Exit..." << endl;
+        return true;
+    }
+    return false;
 }
 
 string ReidManager::getNextSeqString() const
@@ -453,13 +459,6 @@ void ReidManager::recordTrainingSet()
         scaleFactors.at<float>(0,i) = maxValue;
     }
 
-    // Debug
-    cout << "Scale factors computed:" << endl;
-    for(size_t i = 0 ; i < static_cast<unsigned>(trainingData.cols) ; ++i)
-    {
-        cout << scaleFactors.at<float>(0,i) << endl;
-    }
-
     // Set scale factor to the feature
     Features::getInstance().setScaleFactors(scaleFactors);
 
@@ -471,6 +470,10 @@ void ReidManager::recordTrainingSet()
 
     // Record the training data
     FileStorage fileTraining("../../Data/Training/training.yml", FileStorage::WRITE);
+    if(!fileTraining.isOpened())
+    {
+        cout << "Error: Cannot record the training file (folder does not exist ?)" << endl;
+    }
 
     fileTraining << "trainingData" << trainingData;
     fileTraining << "trainingClasses" << trainingClasses;

@@ -16,7 +16,10 @@ int main()
     while (1) {
         exchangeManager.loop();
         reidentificationManager.computeNext();
-        reidentificationManager.eventHandler();
+        if(reidentificationManager.eventHandler())
+        {
+            break; // Exit signal
+        }
     }
     return 0;
 }
