@@ -55,12 +55,12 @@ public:
 
     void setScaleFactors(const Mat &newValue);
 
+    void loadMachineLearning();
 private:
     Features();
 
     int sizeElementArray;
 
-    void loadMachineLearning();
     CvSVM svm;
 
     Mat scaleFactors;

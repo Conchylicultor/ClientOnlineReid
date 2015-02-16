@@ -7,6 +7,7 @@ Here are the controls of the program:
 * __s__: **S**witch mode (Release, Testing, Training)
 * __t__: Generate and record positive and negative sample from the received data in order to generate the **T**raining set.
 * __g__: **G**enerate a testing set and test the efficiency of the binary classifier
+* __b__: Do **B**oth training and testing on the current received sequence
 * __e__: In testing mode, **E**valuate and plot the result to show how well our algorithm perform
 
 Multiple modes are proposed by this software:

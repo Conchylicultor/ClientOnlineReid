@@ -55,6 +55,7 @@ private:
     void selectPairs(Mat &dataSet, Mat &classesSet);
     void recordTrainingSet();
     void testingTestingSet();
+    void trainAndTestSet();
 
     void plotEvaluation();
 

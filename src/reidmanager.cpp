@@ -225,6 +225,12 @@ bool ReidManager::eventHandler()
         recordTrainingSet();
         cout << "Done" << endl;
     }
+    else if(key == 'b' && currentMode == ReidMode::TRAINING)
+    {
+        cout << "Evaluate the learning algorithm..." << endl;
+        trainAndTestSet();
+        cout << "Done" << endl;
+    }
     else if(key == 'g' && currentMode == ReidMode::TRAINING)
     {
         cout << "Testing the received data..." << endl;
@@ -512,6 +518,33 @@ void ReidManager::testingTestingSet()
     {
         cout << "Error: no data (database empty)" << endl;
     }
+}
+
+void ReidManager::trainAndTestSet()
+{
+    // Split the sequences into two set (We don't randomize the list: testing and training
+    // set on two differents times)
+
+    size_t const half_size = database.size() / 2;
+
+    vector<PersonElement> trainDatabase (database.begin(), database.begin() + half_size);
+    vector<PersonElement> testDatabase  (database.begin() + half_size, database.end());
+
+    // Training
+    cout << "Record training set" << endl;
+    std::swap(database, trainDatabase);
+    recordTrainingSet();
+    std::swap(database, trainDatabase);
+
+    // Retrain the classifier
+    cout << "Training classifier..." << endl;
+    Features::getInstance().loadMachineLearning();
+
+    // Testing
+    cout << "Testing" << endl;
+    std::swap(database, testDatabase);
+    testingTestingSet();
+    std::swap(database, testDatabase);
 }
 
 void ReidManager::plotEvaluation()
