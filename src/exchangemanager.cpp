@@ -22,7 +22,10 @@ ExchangeManager &ExchangeManager::getInstance()
     return instance;
 }
 
-ExchangeManager::ExchangeManager() : mosqpp::mosquittopp()
+ExchangeManager::ExchangeManager() :
+    mosqpp::mosquittopp(),
+    midExit(0),
+    exitSend(false)
 {
     // Clear the received file
     ofstream receivedFile("../../Data/Received/received.txt", ofstream::out | ofstream::trunc);
@@ -106,11 +109,19 @@ ExchangeManager::ExchangeManager() : mosqpp::mosquittopp()
 
 ExchangeManager::~ExchangeManager()
 {
+    // Send the last will
     this->publish(protocolVersionTopic,
                   sizeof(unsigned int),
                   &max_version_protocol,
                   2,
-                  true);
+                  true,
+                  &midExit);
+
+    // Wait that the message has been send
+    while(!exitSend)
+    {
+        loop();
+    }
 
     // Disconnect properly
     this->disconnect();
@@ -118,10 +129,10 @@ ExchangeManager::~ExchangeManager()
     mosqpp::lib_cleanup(); // End of use of this library
 }
 
-void ExchangeManager::publish(const string &topic, int payloadlen, const void *payload, int qos, bool retain)
+void ExchangeManager::publish(const string &topic, int payloadlen, const void *payload, int qos, bool retain, int *mid)
 {
     // Publish
-    int result = mosqpp::mosquittopp::publish(NULL, topic.c_str(), payloadlen, payload, qos, retain);
+    int result = mosqpp::mosquittopp::publish(mid, topic.c_str(), payloadlen, payload, qos, retain);
 
     // Check the result
     switch (result) {
@@ -271,4 +282,13 @@ void ExchangeManager::onDataReceived(const mosquitto_message *message)
     }
 
     featuresFile.close();
+}
+
+void ExchangeManager::on_publish(int mid)
+{
+    // If the exit message has been send, we can exit properly
+    if(mid == midExit)
+    {
+        exitSend = true;
+    }
 }
