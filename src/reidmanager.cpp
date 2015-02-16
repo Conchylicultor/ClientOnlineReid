@@ -26,7 +26,7 @@ ReidManager::ReidManager()
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
-    setMode(ReidMode::TESTING); // Default mode
+    setMode(ReidMode::TRAINING); // Default mode
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
 }
 
@@ -60,7 +60,7 @@ void ReidManager::computeNext()
 
         bool newPers = true; // Not found yet
 
-        for(PersonElement currentPers : database)
+        for(PersonElement &currentPers : database)
         {
             if(currentPers.hashId == hashSeqId)
             {

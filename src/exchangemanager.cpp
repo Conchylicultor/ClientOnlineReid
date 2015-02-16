@@ -240,8 +240,6 @@ void ExchangeManager::onRemovedConnection(const mosquitto_message *message)
 
 void ExchangeManager::onDataReceived(const mosquitto_message *message)
 {
-    cout << "Received :" << endl;
-
     // Update the received index
 
     fstream receivedFile("../../Data/Received/received.txt", ios::out | ios::in | ios::app);
