@@ -55,6 +55,8 @@ public:
                       vector<FeaturesElement> &listFeatures) const;
 
     void checkCamera(const FeaturesElement &elem); // Add a camera eventually to the list
+    void saveCameraMap(FileStorage &fileTraining) const;
+    void clearCameraMap();
 
     void setScaleFactors(const Mat &newValue);
 

@@ -26,7 +26,7 @@ ReidManager::ReidManager()
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
-    setMode(ReidMode::TRAINING); // Default mode
+    setMode(ReidMode::TRAINING); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
 }
 
@@ -344,6 +344,8 @@ void ReidManager::setMode(const ReidMode &newMode)
     else if(currentMode == ReidMode::TRAINING)
     {
         cout << "training";
+        // Clear the cameraMap (we learn from a clear)
+        Features::getInstance().clearCameraMap();
     }
     else if(currentMode == ReidMode::TESTING)
     {
@@ -487,6 +489,8 @@ void ReidManager::recordTrainingSet()
     fileTraining << "trainingData" << trainingData;
     fileTraining << "trainingClasses" << trainingClasses;
     fileTraining << "scaleFactors" << scaleFactors;
+
+    Features::getInstance().saveCameraMap(fileTraining);
 
     fileTraining.release();
 }

@@ -180,6 +180,28 @@ void Features::checkCamera(const FeaturesElement &elem)
     }
 }
 
+void Features::saveCameraMap(FileStorage &fileTraining) const
+{
+    // Record the map of the camera
+    if(!fileTraining.isOpened())
+    {
+        cout << "Error: Cannot record the cameras on the training file (folder does not exist ?)" << endl;
+        return;
+    }
+
+    fileTraining << "cameraMap" << "[";
+    for(pair<int, size_t> currentElem : cameraMap) // For each camera
+    {
+        fileTraining << std::to_string(currentElem.second);
+    }
+    fileTraining << "]";
+}
+
+void Features::clearCameraMap()
+{
+    cameraMap.clear();
+}
+
 void Features::setScaleFactors(const Mat &newValue)
 {
     scaleFactors = newValue;
@@ -204,6 +226,14 @@ void Features::loadMachineLearning()
     Mat trainingClasses;
     fileTraining["trainingData"]    >> trainingData;
     fileTraining["trainingClasses"] >> trainingClasses;
+
+    // Load the cameraMap
+    cameraMap.clear();
+    FileNode nodeCameraMap = fileTraining["cameraMap"];
+    for(string currentCam : nodeCameraMap)
+    {
+        cameraMap.insert(pair<int, size_t>(cameraMap.size(), stoull(currentCam)));
+    }
 
     fileTraining.release();
 
