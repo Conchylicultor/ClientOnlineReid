@@ -160,6 +160,26 @@ void Features::extractArray(const float *array, size_t sizeArray, vector<Feature
     }
 }
 
+void Features::checkCamera(const FeaturesElement &elem)
+{
+    bool newCam = true;
+
+    // Does the camera already exist ?
+    for(pair<int, size_t> currentElem : cameraMap)
+    {
+        if(elem.hashCodeCameraId == currentElem.second)
+        {
+            newCam = false;
+        }
+    }
+
+    // Otherwise, we simply add it
+    if(newCam)
+    {
+        cameraMap.insert(pair<int, size_t>(cameraMap.size(), elem.hashCodeCameraId));
+    }
+}
+
 void Features::setScaleFactors(const Mat &newValue)
 {
     scaleFactors = newValue;

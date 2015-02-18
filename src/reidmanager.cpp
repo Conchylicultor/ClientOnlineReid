@@ -56,6 +56,9 @@ void ReidManager::computeNext()
 
     if(currentMode == ReidMode::TRAINING) // For computing or evaluate the result of our binary classifier
     {
+        // Check if there is a new camera
+        Features::getInstance().checkCamera(listCurrentSequenceFeatures.front());
+
         // We simply add the person to the dataset
 
         bool newPers = true; // Not found yet

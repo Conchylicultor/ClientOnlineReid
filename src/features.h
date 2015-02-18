@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <map>
 #include "opencv2/opencv.hpp"
 
 using namespace std;
@@ -53,6 +54,8 @@ public:
                       size_t sizeArray,
                       vector<FeaturesElement> &listFeatures) const;
 
+    void checkCamera(const FeaturesElement &elem); // Add a camera eventually to the list
+
     void setScaleFactors(const Mat &newValue);
 
     void loadMachineLearning();
@@ -64,6 +67,8 @@ private:
     CvSVM svm;
 
     Mat scaleFactors;
+
+    std::map<int, size_t> cameraMap;
 };
 
 #endif // FEATURES_H
