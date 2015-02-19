@@ -3,7 +3,8 @@
 #include <fstream>
 
 // Variables for features computation
-#define HIST_SIZE 100
+const int HIST_SIZE = 100;
+const bool CAMERA_FEATURES = true;
 
 size_t reconstructHashcode(const float *array)
 {
@@ -62,9 +63,19 @@ void Features::scaleRow(Mat rowFeatureVector) const
 
 void Features::computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector) const
 {
-    const int dimentionFeatureVector = 3 // Histogram
-                                     + NB_MAJOR_COLORS_KEEP; // Major colors
-    rowFeatureVector = cv::Mat::ones(1, dimentionFeatureVector, CV_32FC1);
+    int dimentionFeatureVector = 3 // Histogram
+                               + NB_MAJOR_COLORS_KEEP; // Major colors
+
+    // Additionnal feature = additionnal dimention
+    if(CAMERA_FEATURES)
+    {
+        // We add the categorical feature. For instance (0,0,1,0) for cam3 or (1,0,0,0) for cam1
+        dimentionFeatureVector += cameraMap.size()*2; // Factor 2 is for entrance camera and exit camera
+        dimentionFeatureVector += 1; // For the duration between entrance and exit time
+        dimentionFeatureVector += 2; // For the entrance and exit vector (dim 1 because converted to angle)
+    }
+
+    rowFeatureVector = cv::Mat::zeros(1, dimentionFeatureVector, CV_32FC1);
 
     int currentIndexFeature = 0;// Usefull if I change the order or remove a feature (don't need to change all the index)
 
@@ -95,6 +106,70 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
     }
 
     // TODO: Add feature: camera id ; Add feature: time
+    if(CAMERA_FEATURES)
+    {
+        const FeaturesElement *firstElem = 0;
+        const FeaturesElement *lastElem = 0;
+        // Check who came first
+        if(elem1.endDate < elem2.beginDate) // Elem1 > Elem2
+        {
+            firstElem = &elem1;
+            lastElem = &elem2;
+        }
+        else if(elem2.endDate < elem1.beginDate) // Elem2 > Elem1
+        {
+            firstElem = &elem2;
+            lastElem = &elem1;
+        }
+        else
+        {
+            // TODO
+            firstElem = &elem1;
+            lastElem = &elem2;
+        }
+
+        // Entrance and exit cam
+
+        for(pair<int, size_t> currentElem : cameraMap) // For each camera
+        {
+            if(currentElem.second == firstElem->hashCodeCameraId) // 1 for the camera
+            {
+                rowFeatureVector.at<float>(0, currentIndexFeature) = 1.0;
+            }
+            else // 0 for the other
+            {
+                rowFeatureVector.at<float>(0, currentIndexFeature) = 0.0;
+            }
+            currentIndexFeature++;
+        }
+
+        for(pair<int, size_t> currentElem : cameraMap) // For each camera
+        {
+            if(currentElem.second == lastElem->hashCodeCameraId) // 1 for the camera
+            {
+                rowFeatureVector.at<float>(0, currentIndexFeature) = 1.0;
+            }
+            else // 0 for the other
+            {
+                rowFeatureVector.at<float>(0, currentIndexFeature) = 0.0;
+            }
+            currentIndexFeature++;
+        }
+
+
+        // Entrance and exit time
+        rowFeatureVector.at<float>(0, currentIndexFeature) = lastElem->beginDate - firstElem->endDate;
+        currentIndexFeature++;
+
+        // Entrance and exit vector
+        Vec2f cartX(firstElem->exitVector[0], lastElem->exitVector[0]);
+        Vec2f cartY(firstElem->exitVector[1], lastElem->exitVector[1]);
+        Vec2f polAngle;
+        cv::cartToPolar(cartX, cartY, Vec2f(), polAngle);
+        rowFeatureVector.at<float>(0, currentIndexFeature+0) = polAngle[0];
+        rowFeatureVector.at<float>(0, currentIndexFeature+1) = polAngle[1];
+        currentIndexFeature += 2;
+    }
 
     // The feature scaling is not made in this function
 }
