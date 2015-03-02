@@ -432,6 +432,7 @@ void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
 
 void ReidManager::recordTrainingSet()
 {
+    cout << "Record training set" << endl;
     Mat trainingData;
     Mat trainingClasses;
 
@@ -538,13 +539,11 @@ void ReidManager::trainAndTestSet()
     vector<PersonElement> testDatabase  (database.begin() + half_size, database.end());
 
     // Training
-    cout << "Record training set" << endl;
     std::swap(database, trainDatabase);
     recordTrainingSet();
     std::swap(database, trainDatabase);
 
     // Retrain the classifier
-    cout << "Training classifier..." << endl;
     Features::getInstance().loadMachineLearning();
 
     // Testing

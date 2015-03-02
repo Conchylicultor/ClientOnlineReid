@@ -4,7 +4,7 @@
 
 // Variables for features computation
 const int HIST_SIZE = 100;
-const bool CAMERA_FEATURES = true;
+const bool CAMERA_FEATURES = false;
 
 size_t reconstructHashcode(const float *array)
 {
@@ -111,21 +111,22 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
         const FeaturesElement *firstElem = 0;
         const FeaturesElement *lastElem = 0;
         // Check who came first
-        if(elem1.endDate < elem2.beginDate) // Elem1 > Elem2
+        // The one who came first is the first seen (by any camera)
+        // t:--------------------------------------------->
+        // Seq 1,2:        *---------------* *---*
+        // Seq 3:                     *------------*
+        // Seq 4:                *-----*
+        // The order of the sequences above is 1,4,3,2
+        if(elem1.beginDate < elem2.beginDate) // Elem1 > Elem2
         {
             firstElem = &elem1;
             lastElem = &elem2;
         }
-        else if(elem2.endDate < elem1.beginDate) // Elem2 > Elem1
+        else // Elem2 > Elem1
         {
             firstElem = &elem2;
             lastElem = &elem1;
-        }
-        else
-        {
-            // TODO
-            firstElem = &elem1;
-            lastElem = &elem2;
+            // If begin at the same time, arbitrary choice
         }
 
         // Entrance and exit cam
@@ -292,6 +293,7 @@ void Features::loadMachineLearning()
         cout << "Error: cannot open the training file" << endl;
         return; // No exit: we could be in training mode
     }
+    cout << "Training classifier..." << endl;
 
     // Loading the scales factors
     fileTraining["scaleFactors"] >> scaleFactors;
