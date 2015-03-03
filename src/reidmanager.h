@@ -12,9 +12,33 @@ using namespace std;
 
 enum class ReidMode {RELEASE, TRAINING, TESTING};
 
+
+struct CamInfosElement
+{
+    size_t hashCodeCameraId;
+    int beginDate;
+    int endDate;
+    cv::Vec2f entranceVector;
+    cv::Vec2f exitVector;
+};
+
+struct TransitionElement
+{
+    // Information on the first stage of the transition (leave the camera)
+    size_t hashCodeCameraIdOut;
+    cv::Vec2f exitVector;
+
+    // Information on the final stage of the transition (reappearance)
+    size_t hashCodeCameraIdIn;
+    cv::Vec2f entranceVector;
+
+    int transitionDuration; // Can be negative if the person reappear in a camera before leaving the previous one
+};
+
 struct PersonElement
 {
     vector<FeaturesElement> features;
+    vector<CamInfosElement> camInfosList;
     string name;
     size_t hashId;
 };
@@ -63,6 +87,12 @@ private:
     vector<PersonElement> database;
 
     vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
+
+    // TODO: Temporary ?
+    // Move this code (and the declaration of the transition element) in a separate class (new Transition class or into the Feature class ?)
+    // TODO: Cleanup all the transitions allusions in the Feature class (distance computation, record traning, )
+    vector<TransitionElement> listTransitions;
+    void recordTransitions();
 };
 
 #endif // REIDMANAGER_H

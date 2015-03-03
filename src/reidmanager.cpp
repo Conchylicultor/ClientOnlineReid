@@ -49,8 +49,17 @@ void ReidManager::computeNext()
     size_t hashSeqId = reconstructHashcode(&arrayReceived[0]); // Get the id of the sequence
 
     vector<FeaturesElement> listCurrentSequenceFeatures;
+    CamInfosElement currentSequenceCamInfos;
     size_t offset = 2; // The other ofsets values are extracted on the next function
     Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
+    // TODO Cleanup: Get instance Transitions and extract camera infos ; Remove folowing code:
+    FeaturesElement extractCamInfos = listCurrentSequenceFeatures.front();
+    currentSequenceCamInfos.hashCodeCameraId = extractCamInfos.hashCodeCameraId;
+    currentSequenceCamInfos.beginDate = extractCamInfos.beginDate;
+    currentSequenceCamInfos.endDate = extractCamInfos.endDate;
+    currentSequenceCamInfos.entranceVector = extractCamInfos.entranceVector;
+    currentSequenceCamInfos.exitVector = extractCamInfos.exitVector;
+    // End Removing
 
     delete arrayReceived;
 
@@ -68,6 +77,7 @@ void ReidManager::computeNext()
             if(currentPers.hashId == hashSeqId)
             {
                 currentPers.features.insert(currentPers.features.end(), listCurrentSequenceFeatures.begin(), listCurrentSequenceFeatures.end());
+                currentPers.camInfosList.push_back(currentSequenceCamInfos);
                 newPers = false;
             }
         }
@@ -78,6 +88,7 @@ void ReidManager::computeNext()
             // Add the new person to the database
             database.push_back(PersonElement());
             database.back().features.swap(listCurrentSequenceFeatures);
+            database.back().camInfosList.push_back(currentSequenceCamInfos);
             database.back().name = std::to_string(hashSeqId);
             database.back().hashId = hashSeqId;
         }
@@ -494,6 +505,15 @@ void ReidManager::recordTrainingSet()
     Features::getInstance().saveCameraMap(fileTraining);
 
     fileTraining.release();
+
+    // Compute the transitions
+    recordTransitions();
+
+    // TODO: Instead of this function, encapsulate those into a "mother function", like:
+    // void record() {
+    //     recordTrainingSet();
+    //     recordTransitions();
+    // }
 }
 
 void ReidManager::testingTestingSet()
@@ -623,4 +643,59 @@ void ReidManager::plotEvaluation()
     imshow("Evaluation Results", imgEval);
 
     //waitKey();
+}
+
+void ReidManager::recordTransitions()
+{
+    for(PersonElement const &currentPerson : database)
+    {
+        for(size_t i = 0 ; i < currentPerson.camInfosList.size() ; ++i)
+        {
+            // TODO: What is the best way to determine the transitions ? Can the algorithm be improved ?
+            // Can we have multiple valid transitions for one sequence (not just between two cameras) ?
+
+            // Looking for the smallest transition
+            int closestCamInfos = -1;
+            int closestCamInfosDuration = -1;
+            for(size_t j = 0 ; j < currentPerson.camInfosList.size() ; ++j)
+            {
+                // Find the shortest transition
+                if(i != j && currentPerson.camInfosList.at(i).beginDate < currentPerson.camInfosList.at(j).beginDate)
+                {
+                    int currentDuration = currentPerson.camInfosList.at(j).beginDate - currentPerson.camInfosList.at(i).beginDate; // > 0 (due to previous condition)
+
+                    // First time
+                    if(closestCamInfos == -1)
+                    {
+                        closestCamInfosDuration = currentDuration;
+                        closestCamInfos = j;
+                    }
+                    else if(currentDuration < closestCamInfosDuration)
+                    {
+                        closestCamInfosDuration = currentDuration;
+                        closestCamInfos = j;
+                    }
+                }
+            }
+
+            // Match
+            if(closestCamInfos != -1)
+            {
+                // The transition is between an exit and a re-entrance
+                const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
+                const CamInfosElement &camInfoElemtIn = currentPerson.camInfosList.at(closestCamInfos);
+
+                TransitionElement newTransition;
+                newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
+                newTransition.exitVector = camInfoElemtOut.exitVector;
+
+                newTransition.hashCodeCameraIdIn = camInfoElemtIn.hashCodeCameraId;
+                newTransition.entranceVector = camInfoElemtIn.entranceVector;
+
+                newTransition.transitionDuration = camInfoElemtIn.beginDate - camInfoElemtOut.endDate; // != closestCamInfosDuration
+
+                listTransitions.push_back(newTransition);
+            }
+        }
+    }
 }
