@@ -10,6 +10,9 @@ using namespace std;
 
 static const float thresholdValueSamePerson = 0.21;
 
+static const int transitionDurationMin = -10;
+static const int transitionDurationMax = 10; // Duration limits of the transition
+
 struct ElemTraining
 {
     unsigned int idPers1; // index in the dataset
@@ -641,8 +644,6 @@ void ReidManager::plotEvaluation()
     // Display
     namedWindow("Evaluation Results", CV_WINDOW_AUTOSIZE);
     imshow("Evaluation Results", imgEval);
-
-    //waitKey();
 }
 
 void ReidManager::recordTransitions()
@@ -678,24 +679,42 @@ void ReidManager::recordTransitions()
                 }
             }
 
+            // Creation of the new transition
+            TransitionElement newTransition;
+
+            // The transition is between an exit and a re-entrance
+            const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
+            newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
+            newTransition.exitVector = camInfoElemtOut.exitVector;
+
             // Match
             if(closestCamInfos != -1)
             {
                 // The transition is between an exit and a re-entrance
-                const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
                 const CamInfosElement &camInfoElemtIn = currentPerson.camInfosList.at(closestCamInfos);
-
-                TransitionElement newTransition;
-                newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
-                newTransition.exitVector = camInfoElemtOut.exitVector;
-
                 newTransition.hashCodeCameraIdIn = camInfoElemtIn.hashCodeCameraId;
                 newTransition.entranceVector = camInfoElemtIn.entranceVector;
 
                 newTransition.transitionDuration = camInfoElemtIn.beginDate - camInfoElemtOut.endDate; // != closestCamInfosDuration
 
-                listTransitions.push_back(newTransition);
+                // Filter the transition if the duration is too long
+                if(newTransition.transitionDuration > transitionDurationMax ||
+                   newTransition.transitionDuration < transitionDurationMin)
+                {
+                    cout << "Transition too long(disappearance): " << newTransition.transitionDuration << endl;
+                    closestCamInfos = -1; // Add the transition as disappearance transition
+                }
             }
+
+            // No match: disappearance
+            if(closestCamInfos == -1)
+            {
+                newTransition.hashCodeCameraIdIn = 0; // < No reappareance
+                newTransition.entranceVector = cv::Vec2f(0.0, 0.0);
+                newTransition.transitionDuration = 0;
+            }
+
+            listTransitions.push_back(newTransition);
         }
     }
 }
