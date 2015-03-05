@@ -242,6 +242,12 @@ bool ReidManager::eventHandler()
         recordReceivedData();
         cout << "Done" << endl;
     }
+    else if(key == 'c' && currentMode == ReidMode::TRAINING)
+    {
+        cout << "Calibrations of the cameras..." << endl;
+        recordTransitions();
+        cout << "Done" << endl;
+    }
     else if(key == 'b' && currentMode == ReidMode::TRAINING)
     {
         cout << "Evaluate the learning algorithm..." << endl;
@@ -521,6 +527,7 @@ void ReidManager::recordTrainingSet()
 
 void ReidManager::recordTransitions()
 {
+    cout << "Record transitions" << endl;
     for(PersonElement const &currentPerson : database)
     {
         for(size_t i = 0 ; i < currentPerson.camInfosList.size() ; ++i)
@@ -590,6 +597,30 @@ void ReidManager::recordTransitions()
             listTransitions.push_back(newTransition);
         }
     }
+
+    // Record the transitions: Append to existing file
+    FileStorage fileTraining("../../Data/Training/calibration.yml", FileStorage::WRITE);
+    if(!fileTraining.isOpened())
+    {
+        cout << "Error: Cannot record the calibration file (folder does not exist ?)" << endl;
+    }
+
+    fileTraining << "transitions" << "[";
+    for(TransitionElement const &currentTransition : listTransitions)
+    {
+        fileTraining << "{:";
+        fileTraining << "camOut" << std::to_string(currentTransition.hashCodeCameraIdOut);
+        fileTraining << "VecOutX" << currentTransition.exitVector[0];
+        fileTraining << "VecOutY" << currentTransition.exitVector[1];
+        fileTraining << "camIn" << std::to_string(currentTransition.hashCodeCameraIdIn);
+        fileTraining << "VecInX" << currentTransition.entranceVector[0];
+        fileTraining << "VecInY" << currentTransition.entranceVector[1];
+        fileTraining << "dur" << currentTransition.transitionDuration;
+        fileTraining << "}";
+    }
+    fileTraining << "]";
+
+    fileTraining.release();
 }
 
 void ReidManager::testingTestingSet()
