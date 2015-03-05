@@ -239,7 +239,7 @@ bool ReidManager::eventHandler()
     else if(key == 't' && currentMode == ReidMode::TRAINING)
     {
         cout << "Creating the training set (from the received data)..." << endl;
-        recordTrainingSet();
+        recordReceivedData();
         cout << "Done" << endl;
     }
     else if(key == 'b' && currentMode == ReidMode::TRAINING)
@@ -444,6 +444,15 @@ void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
     }
 }
 
+void ReidManager::recordReceivedData()
+{
+    // Create the training set
+    recordTrainingSet();
+
+    // Compute the transitions
+    recordTransitions();
+}
+
 void ReidManager::recordTrainingSet()
 {
     cout << "Record training set" << endl;
@@ -508,15 +517,79 @@ void ReidManager::recordTrainingSet()
     Features::getInstance().saveCameraMap(fileTraining);
 
     fileTraining.release();
+}
 
-    // Compute the transitions
-    recordTransitions();
+void ReidManager::recordTransitions()
+{
+    for(PersonElement const &currentPerson : database)
+    {
+        for(size_t i = 0 ; i < currentPerson.camInfosList.size() ; ++i)
+        {
+            // TODO: What is the best way to determine the transitions ? Can the algorithm be improved ?
+            // Can we have multiple valid transitions for one sequence (not just between two cameras) ?
 
-    // TODO: Instead of this function, encapsulate those into a "mother function", like:
-    // void record() {
-    //     recordTrainingSet();
-    //     recordTransitions();
-    // }
+            // Looking for the smallest transition
+            int closestCamInfos = -1;
+            int closestCamInfosDuration = -1;
+            for(size_t j = 0 ; j < currentPerson.camInfosList.size() ; ++j)
+            {
+                // Find the shortest transition
+                if(i != j && currentPerson.camInfosList.at(i).beginDate < currentPerson.camInfosList.at(j).beginDate)
+                {
+                    int currentDuration = currentPerson.camInfosList.at(j).beginDate - currentPerson.camInfosList.at(i).beginDate; // > 0 (due to previous condition)
+
+                    // First time
+                    if(closestCamInfos == -1)
+                    {
+                        closestCamInfosDuration = currentDuration;
+                        closestCamInfos = j;
+                    }
+                    else if(currentDuration < closestCamInfosDuration)
+                    {
+                        closestCamInfosDuration = currentDuration;
+                        closestCamInfos = j;
+                    }
+                }
+            }
+
+            // Creation of the new transition
+            TransitionElement newTransition;
+
+            // The transition is between an exit and a re-entrance
+            const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
+            newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
+            newTransition.exitVector = camInfoElemtOut.exitVector;
+
+            // Match
+            if(closestCamInfos != -1)
+            {
+                // The transition is between an exit and a re-entrance
+                const CamInfosElement &camInfoElemtIn = currentPerson.camInfosList.at(closestCamInfos);
+                newTransition.hashCodeCameraIdIn = camInfoElemtIn.hashCodeCameraId;
+                newTransition.entranceVector = camInfoElemtIn.entranceVector;
+
+                newTransition.transitionDuration = camInfoElemtIn.beginDate - camInfoElemtOut.endDate; // != closestCamInfosDuration
+
+                // Filter the transition if the duration is too long
+                if(newTransition.transitionDuration > transitionDurationMax ||
+                   newTransition.transitionDuration < transitionDurationMin)
+                {
+                    cout << "Transition too long(disappearance): " << newTransition.transitionDuration << endl;
+                    closestCamInfos = -1; // Add the transition as disappearance transition
+                }
+            }
+
+            // No match: disappearance
+            if(closestCamInfos == -1)
+            {
+                newTransition.hashCodeCameraIdIn = 0; // < No reappareance
+                newTransition.entranceVector = cv::Vec2f(0.0, 0.0);
+                newTransition.transitionDuration = 0;
+            }
+
+            listTransitions.push_back(newTransition);
+        }
+    }
 }
 
 void ReidManager::testingTestingSet()
@@ -563,7 +636,7 @@ void ReidManager::trainAndTestSet()
 
     // Training
     std::swap(database, trainDatabase);
-    recordTrainingSet();
+    recordReceivedData();
     std::swap(database, trainDatabase);
 
     // Retrain the classifier
@@ -644,77 +717,4 @@ void ReidManager::plotEvaluation()
     // Display
     namedWindow("Evaluation Results", CV_WINDOW_AUTOSIZE);
     imshow("Evaluation Results", imgEval);
-}
-
-void ReidManager::recordTransitions()
-{
-    for(PersonElement const &currentPerson : database)
-    {
-        for(size_t i = 0 ; i < currentPerson.camInfosList.size() ; ++i)
-        {
-            // TODO: What is the best way to determine the transitions ? Can the algorithm be improved ?
-            // Can we have multiple valid transitions for one sequence (not just between two cameras) ?
-
-            // Looking for the smallest transition
-            int closestCamInfos = -1;
-            int closestCamInfosDuration = -1;
-            for(size_t j = 0 ; j < currentPerson.camInfosList.size() ; ++j)
-            {
-                // Find the shortest transition
-                if(i != j && currentPerson.camInfosList.at(i).beginDate < currentPerson.camInfosList.at(j).beginDate)
-                {
-                    int currentDuration = currentPerson.camInfosList.at(j).beginDate - currentPerson.camInfosList.at(i).beginDate; // > 0 (due to previous condition)
-
-                    // First time
-                    if(closestCamInfos == -1)
-                    {
-                        closestCamInfosDuration = currentDuration;
-                        closestCamInfos = j;
-                    }
-                    else if(currentDuration < closestCamInfosDuration)
-                    {
-                        closestCamInfosDuration = currentDuration;
-                        closestCamInfos = j;
-                    }
-                }
-            }
-
-            // Creation of the new transition
-            TransitionElement newTransition;
-
-            // The transition is between an exit and a re-entrance
-            const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
-            newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
-            newTransition.exitVector = camInfoElemtOut.exitVector;
-
-            // Match
-            if(closestCamInfos != -1)
-            {
-                // The transition is between an exit and a re-entrance
-                const CamInfosElement &camInfoElemtIn = currentPerson.camInfosList.at(closestCamInfos);
-                newTransition.hashCodeCameraIdIn = camInfoElemtIn.hashCodeCameraId;
-                newTransition.entranceVector = camInfoElemtIn.entranceVector;
-
-                newTransition.transitionDuration = camInfoElemtIn.beginDate - camInfoElemtOut.endDate; // != closestCamInfosDuration
-
-                // Filter the transition if the duration is too long
-                if(newTransition.transitionDuration > transitionDurationMax ||
-                   newTransition.transitionDuration < transitionDurationMin)
-                {
-                    cout << "Transition too long(disappearance): " << newTransition.transitionDuration << endl;
-                    closestCamInfos = -1; // Add the transition as disappearance transition
-                }
-            }
-
-            // No match: disappearance
-            if(closestCamInfos == -1)
-            {
-                newTransition.hashCodeCameraIdIn = 0; // < No reappareance
-                newTransition.entranceVector = cv::Vec2f(0.0, 0.0);
-                newTransition.transitionDuration = 0;
-            }
-
-            listTransitions.push_back(newTransition);
-        }
-    }
 }

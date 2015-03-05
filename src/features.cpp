@@ -105,7 +105,6 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
         currentIndexFeature++;
     }
 
-    // TODO: Add feature: camera id ; Add feature: time
     if(CAMERA_FEATURES)
     {
         const FeaturesElement *firstElem = 0;
@@ -216,7 +215,7 @@ void Features::extractArray(const float *array, size_t sizeArray, vector<Feature
         // Histogram
         for(size_t channelId = 0 ; channelId < 3 ; ++channelId)
         {
-            currentElem.histogramChannels.at(channelId).create(1,100,CV_32F); // TODO: Check order x,y !!!!!!!
+            currentElem.histogramChannels.at(channelId).create(1,100,CV_32F);
             for(size_t i = 0 ; i < HIST_SIZE ; ++i)
             {
                 currentElem.histogramChannels.at(channelId).at<float>(i) = array[currentId];

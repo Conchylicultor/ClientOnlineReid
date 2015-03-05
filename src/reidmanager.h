@@ -77,7 +77,11 @@ private:
     void setMode(const ReidMode &newMode);
 
     void selectPairs(Mat &dataSet, Mat &classesSet);
+
+    void recordReceivedData(); // Just encapsulate the two following functions
     void recordTrainingSet();
+    void recordTransitions();
+
     void testingTestingSet();
     void trainAndTestSet();
 
@@ -92,7 +96,6 @@ private:
     // Move this code (and the declaration of the transition element) in a separate class (new Transition class or into the Feature class ?)
     // TODO: Cleanup all the transitions allusions in the Feature class (distance computation, record traning, )
     vector<TransitionElement> listTransitions;
-    void recordTransitions();
 };
 
 #endif // REIDMANAGER_H
