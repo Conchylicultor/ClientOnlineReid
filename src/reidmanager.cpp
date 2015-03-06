@@ -468,6 +468,13 @@ void ReidManager::recordReceivedData()
 void ReidManager::recordTrainingSet()
 {
     cout << "Record training set" << endl;
+
+    if(database.size() <= 1)
+    {
+        cout << "Error: only one person in the database, cannot compute the training set" << endl;
+        return;
+    }
+
     Mat trainingData;
     Mat trainingClasses;
 
