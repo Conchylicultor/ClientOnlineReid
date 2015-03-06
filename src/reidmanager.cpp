@@ -248,6 +248,12 @@ bool ReidManager::eventHandler()
         recordTransitions();
         cout << "Done" << endl;
     }
+    else if(key == 'p' && currentMode == ReidMode::TRAINING)
+    {
+        cout << "Plot the transitions..." << endl;
+        plotTransitions();
+        cout << "Done" << endl;
+    }
     else if(key == 'b' && currentMode == ReidMode::TRAINING)
     {
         cout << "Evaluate the learning algorithm..." << endl;
@@ -748,4 +754,54 @@ void ReidManager::plotEvaluation()
     // Display
     namedWindow("Evaluation Results", CV_WINDOW_AUTOSIZE);
     imshow("Evaluation Results", imgEval);
+}
+
+void ReidManager::plotTransitions()
+{
+    vector<Mat> camImgs(Features::getInstance().getCameraMap().size());
+    for(Mat &currentImg : camImgs)
+    {
+        currentImg = Mat::zeros(Size(320,240),CV_8UC3);
+    }
+
+    for(TransitionElement const &currentTransition : listTransitions)
+    {
+        const int lengthArrow = 50;
+        // Choose a random color for the arrow
+        Scalar color;
+        color[0] = std::rand() % 255;
+        color[1] = std::rand() % 255;
+        color[2] = std::rand() % 255;
+
+        for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
+        {
+            // Has an exit
+            if(currentTransition.hashCodeCameraIdOut == currentCam.second)
+            {
+                Point pt1(camImgs.front().cols / 2, camImgs.front().rows / 2);
+                Point pt2(pt1.x + lengthArrow * currentTransition.exitVector[0],
+                          pt1.y + lengthArrow * currentTransition.exitVector[1]);
+
+                // Plot the arrow into the right cam
+                cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
+            }
+
+            // Has an entrance
+            if(currentTransition.hashCodeCameraIdIn == currentCam.second)
+            {
+                Point pt1(camImgs.front().cols / 2, camImgs.front().rows / 2);
+                Point pt2(pt1.x + lengthArrow * currentTransition.entranceVector[0],
+                          pt1.y + lengthArrow * currentTransition.entranceVector[1]);
+
+                // Plot the arrow into the right cam
+                cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
+            }
+        }
+    }
+
+    for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
+    {
+        cout << currentCam.first << endl;
+        imshow("Transition: " + std::to_string(currentCam.second), camImgs.at(currentCam.first));
+    }
 }

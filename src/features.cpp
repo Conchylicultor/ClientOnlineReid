@@ -277,6 +277,11 @@ void Features::clearCameraMap()
     cameraMap.clear();
 }
 
+std::map<int, size_t> Features::getCameraMap() const
+{
+    return cameraMap;
+}
+
 void Features::setScaleFactors(const Mat &newValue)
 {
     scaleFactors = newValue;

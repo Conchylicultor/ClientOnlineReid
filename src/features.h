@@ -57,10 +57,12 @@ public:
     void checkCamera(const FeaturesElement &elem); // Add a camera eventually to the list
     void saveCameraMap(FileStorage &fileTraining) const;
     void clearCameraMap();
+    std::map<int, size_t> getCameraMap() const;
 
     void setScaleFactors(const Mat &newValue);
 
     void loadMachineLearning();
+
 private:
     Features();
 

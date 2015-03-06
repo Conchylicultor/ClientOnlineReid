@@ -95,6 +95,7 @@ private:
     // TODO: Temporary ?
     // Move this code (and the declaration of the transition element) in a separate class (new Transition class or into the Feature class ?)
     // TODO: Cleanup all the transitions allusions in the Feature class (distance computation, record traning, )
+    void plotTransitions();
     vector<TransitionElement> listTransitions;
 };
 
