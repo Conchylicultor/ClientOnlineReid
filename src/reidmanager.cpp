@@ -776,9 +776,21 @@ void ReidManager::plotEvaluation()
 void ReidManager::plotTransitions()
 {
     vector<Mat> camImgs(Features::getInstance().getCameraMap().size());
-    for(Mat &currentImg : camImgs)
+
+    // Loading background image
+    for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
     {
-        currentImg = Mat::zeros(Size(640,480),CV_8UC3);
+        cv::Mat backgroundImg = imread("../../Data/Models/background_" + std::to_string(currentCam.second) + ".png", CV_LOAD_IMAGE_GRAYSCALE); // No color for better vision
+
+        camImgs.at(currentCam.first).create(backgroundImg.size(), CV_8UC3);
+
+        cv::cvtColor(backgroundImg, camImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
+
+        if(!camImgs.at(currentCam.first).data)
+        {
+            cout << "Error: no background image for the cam: " << currentCam.second << ", loading default background..." << endl;
+            camImgs.at(currentCam.first) = Mat::zeros(Size(640,480),CV_8UC3);
+        }
     }
 
     for(TransitionElement const &currentTransition : listTransitions)
@@ -798,8 +810,8 @@ void ReidManager::plotTransitions()
                 Point pt2(currentTransition.exitVectorEnd[0],    currentTransition.exitVectorEnd[1]);
 
                 // Plot the arrow into the right cam
-                cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
-                cv::circle(camImgs.at(currentCam.first), pt2, 2, color);
+                cv::line(camImgs.at(currentCam.first), pt1, pt2, color, 2);
+                cv::circle(camImgs.at(currentCam.first), pt2, 3, color);
             }
 
             // Has an entrance
@@ -809,15 +821,14 @@ void ReidManager::plotTransitions()
                 Point pt2(currentTransition.entranceVectorEnd[0],    currentTransition.entranceVectorEnd[1]);
 
                 // Plot the arrow into the right cam
-                cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
-                cv::circle(camImgs.at(currentCam.first), pt2, 2, color);
+                cv::line(camImgs.at(currentCam.first), pt1, pt2, color, 2);
+                cv::circle(camImgs.at(currentCam.first), pt2, 3, color);
             }
         }
     }
 
     for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
     {
-        cout << currentCam.first << endl;
         imshow("Transition: " + std::to_string(currentCam.second), camImgs.at(currentCam.first));
     }
 }
