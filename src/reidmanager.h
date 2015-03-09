@@ -18,19 +18,23 @@ struct CamInfosElement
     size_t hashCodeCameraId;
     int beginDate;
     int endDate;
-    cv::Vec2f entranceVector;
-    cv::Vec2f exitVector;
+    cv::Vec2f entranceVectorOrigin;
+    cv::Vec2f entranceVectorEnd;
+    cv::Vec2f exitVectorOrigin;
+    cv::Vec2f exitVectorEnd;
 };
 
 struct TransitionElement
 {
     // Information on the first stage of the transition (leave the camera)
     size_t hashCodeCameraIdOut;
-    cv::Vec2f exitVector;
+    cv::Vec2f exitVectorOrigin;
+    cv::Vec2f exitVectorEnd;
 
     // Information on the final stage of the transition (reappearance)
     size_t hashCodeCameraIdIn;
-    cv::Vec2f entranceVector;
+    cv::Vec2f entranceVectorOrigin;
+    cv::Vec2f entranceVectorEnd;
 
     int transitionDuration; // Can be negative if the person reappear in a camera before leaving the previous one
 };

@@ -55,13 +55,16 @@ void ReidManager::computeNext()
     CamInfosElement currentSequenceCamInfos;
     size_t offset = 2; // The other ofsets values are extracted on the next function
     Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
+    // TODO Cleanup: Merge CameraInfos and list<FeaturesElement> into a struct SequenceElem
     // TODO Cleanup: Get instance Transitions and extract camera infos ; Remove folowing code:
     FeaturesElement extractCamInfos = listCurrentSequenceFeatures.front();
     currentSequenceCamInfos.hashCodeCameraId = extractCamInfos.hashCodeCameraId;
     currentSequenceCamInfos.beginDate = extractCamInfos.beginDate;
     currentSequenceCamInfos.endDate = extractCamInfos.endDate;
-    currentSequenceCamInfos.entranceVector = extractCamInfos.entranceVector;
-    currentSequenceCamInfos.exitVector = extractCamInfos.exitVector;
+    currentSequenceCamInfos.entranceVectorOrigin = extractCamInfos.entranceVectorOrigin;
+    currentSequenceCamInfos.entranceVectorEnd = extractCamInfos.entranceVectorEnd;
+    currentSequenceCamInfos.exitVectorOrigin = extractCamInfos.exitVectorOrigin;
+    currentSequenceCamInfos.exitVectorEnd = extractCamInfos.exitVectorEnd;
     // End Removing
 
     delete arrayReceived;
@@ -578,7 +581,8 @@ void ReidManager::recordTransitions()
             // The transition is between an exit and a re-entrance
             const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
             newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
-            newTransition.exitVector = camInfoElemtOut.exitVector;
+            newTransition.exitVectorOrigin = camInfoElemtOut.exitVectorOrigin;
+            newTransition.exitVectorEnd = camInfoElemtOut.exitVectorEnd;
 
             // Match
             if(closestCamInfos != -1)
@@ -586,7 +590,8 @@ void ReidManager::recordTransitions()
                 // The transition is between an exit and a re-entrance
                 const CamInfosElement &camInfoElemtIn = currentPerson.camInfosList.at(closestCamInfos);
                 newTransition.hashCodeCameraIdIn = camInfoElemtIn.hashCodeCameraId;
-                newTransition.entranceVector = camInfoElemtIn.entranceVector;
+                newTransition.entranceVectorOrigin = camInfoElemtIn.entranceVectorOrigin;
+                newTransition.entranceVectorEnd = camInfoElemtIn.entranceVectorEnd;
 
                 newTransition.transitionDuration = camInfoElemtIn.beginDate - camInfoElemtOut.endDate; // != closestCamInfosDuration
 
@@ -603,7 +608,8 @@ void ReidManager::recordTransitions()
             if(closestCamInfos == -1)
             {
                 newTransition.hashCodeCameraIdIn = 0; // < No reappareance
-                newTransition.entranceVector = cv::Vec2f(0.0, 0.0);
+                newTransition.entranceVectorOrigin = cv::Vec2f(0.0, 0.0);
+                newTransition.entranceVectorEnd = cv::Vec2f(0.0, 0.0);
                 newTransition.transitionDuration = 0;
             }
 
@@ -623,11 +629,15 @@ void ReidManager::recordTransitions()
     {
         fileTraining << "{:";
         fileTraining << "camOut" << std::to_string(currentTransition.hashCodeCameraIdOut);
-        fileTraining << "VecOutX" << currentTransition.exitVector[0];
-        fileTraining << "VecOutY" << currentTransition.exitVector[1];
+        fileTraining << "VecOutX1" << currentTransition.exitVectorOrigin[0];
+        fileTraining << "VecOutY1" << currentTransition.exitVectorOrigin[1];
+        fileTraining << "VecOutX2" << currentTransition.exitVectorEnd[0];
+        fileTraining << "VecOutY2" << currentTransition.exitVectorEnd[1];
         fileTraining << "camIn" << std::to_string(currentTransition.hashCodeCameraIdIn);
-        fileTraining << "VecInX" << currentTransition.entranceVector[0];
-        fileTraining << "VecInY" << currentTransition.entranceVector[1];
+        fileTraining << "VecInX1" << currentTransition.entranceVectorOrigin[0];
+        fileTraining << "VecInY1" << currentTransition.entranceVectorOrigin[1];
+        fileTraining << "VecInX2" << currentTransition.entranceVectorEnd[0];
+        fileTraining << "VecInY2" << currentTransition.entranceVectorEnd[1];
         fileTraining << "dur" << currentTransition.transitionDuration;
         fileTraining << "}";
     }
@@ -768,7 +778,7 @@ void ReidManager::plotTransitions()
     vector<Mat> camImgs(Features::getInstance().getCameraMap().size());
     for(Mat &currentImg : camImgs)
     {
-        currentImg = Mat::zeros(Size(320,240),CV_8UC3);
+        currentImg = Mat::zeros(Size(640,480),CV_8UC3);
     }
 
     for(TransitionElement const &currentTransition : listTransitions)
@@ -785,9 +795,9 @@ void ReidManager::plotTransitions()
             // Has an exit
             if(currentTransition.hashCodeCameraIdOut == currentCam.second)
             {
-                Point pt1(camImgs.front().cols / 2, camImgs.front().rows / 2);
-                Point pt2(pt1.x + lengthArrow * currentTransition.exitVector[0],
-                          pt1.y + lengthArrow * currentTransition.exitVector[1]);
+                cout << currentTransition.exitVectorOrigin << "  " << currentTransition.exitVectorEnd << endl;
+                Point pt1(currentTransition.exitVectorOrigin[0], currentTransition.exitVectorOrigin[1]);
+                Point pt2(currentTransition.exitVectorEnd[0],    currentTransition.exitVectorEnd[1]);
 
                 // Plot the arrow into the right cam
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
@@ -796,9 +806,8 @@ void ReidManager::plotTransitions()
             // Has an entrance
             if(currentTransition.hashCodeCameraIdIn == currentCam.second)
             {
-                Point pt1(camImgs.front().cols / 2, camImgs.front().rows / 2);
-                Point pt2(pt1.x + lengthArrow * currentTransition.entranceVector[0],
-                          pt1.y + lengthArrow * currentTransition.entranceVector[1]);
+                Point pt1(currentTransition.entranceVectorOrigin[0], currentTransition.entranceVectorOrigin[1]);
+                Point pt2(currentTransition.entranceVectorEnd[0],    currentTransition.entranceVectorEnd[1]);
 
                 // Plot the arrow into the right cam
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, color);

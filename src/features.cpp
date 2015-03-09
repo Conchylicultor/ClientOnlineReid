@@ -162,13 +162,14 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
         currentIndexFeature++;
 
         // Entrance and exit vector
+        /* TODO:
         Vec2f cartX(firstElem->exitVector[0], lastElem->exitVector[0]);
         Vec2f cartY(firstElem->exitVector[1], lastElem->exitVector[1]);
         Vec2f polAngle;
         cv::cartToPolar(cartX, cartY, Vec2f(), polAngle);
         rowFeatureVector.at<float>(0, currentIndexFeature+0) = polAngle[0];
         rowFeatureVector.at<float>(0, currentIndexFeature+1) = polAngle[1];
-        currentIndexFeature += 2;
+        currentIndexFeature += 2;*/
     }
 
     // The feature scaling is not made in this function
@@ -189,11 +190,13 @@ void Features::extractArray(const float *array, size_t sizeArray, vector<Feature
     int beginDate = reinterpret_cast<int&>(castValue);
     castValue = array[3];
     int endDate = reinterpret_cast<int&>(castValue);
-    cv::Vec2f entranceVector(array[4], array[5]);
-    cv::Vec2f exitVector(array[6], array[7]);
+    cv::Vec2f entranceVectorOrigin(array[4], array[5]);
+    cv::Vec2f entranceVectorEnd(array[6], array[7]);
+    cv::Vec2f exitVectorOrigin(array[8], array[9]);
+    cv::Vec2f exitVectorEnd(array[10], array[11]);
 
     // Shift the origin to remove the offset
-    size_t offset = 8;
+    size_t offset = 12;
     array = &array[offset];
     sizeArray -= offset;
 
@@ -209,8 +212,10 @@ void Features::extractArray(const float *array, size_t sizeArray, vector<Feature
         currentElem.hashCodeCameraId = hashCodeCameraId;
         currentElem.beginDate = beginDate;
         currentElem.endDate = endDate;
-        currentElem.entranceVector = entranceVector;
-        currentElem.exitVector = exitVector;
+        currentElem.entranceVectorOrigin = entranceVectorOrigin;
+        currentElem.entranceVectorEnd    = entranceVectorEnd;
+        currentElem.exitVectorOrigin     = exitVectorOrigin;
+        currentElem.exitVectorEnd        = exitVectorEnd;
 
         // Histogram
         for(size_t channelId = 0 ; channelId < 3 ; ++channelId)

@@ -35,8 +35,10 @@ struct FeaturesElement
     size_t hashCodeCameraId;
     int beginDate;
     int endDate;
-    cv::Vec2f entranceVector;
-    cv::Vec2f exitVector;
+    cv::Vec2f entranceVectorOrigin;
+    cv::Vec2f entranceVectorEnd;
+    cv::Vec2f exitVectorOrigin;
+    cv::Vec2f exitVectorEnd;
 };
 
 size_t reconstructHashcode(const float *array); // Reconstruct the received hashcode from 2 float received in the array
