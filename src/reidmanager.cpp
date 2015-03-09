@@ -783,7 +783,6 @@ void ReidManager::plotTransitions()
 
     for(TransitionElement const &currentTransition : listTransitions)
     {
-        const int lengthArrow = 50;
         // Choose a random color for the arrow
         Scalar color;
         color[0] = std::rand() % 255;
@@ -795,12 +794,12 @@ void ReidManager::plotTransitions()
             // Has an exit
             if(currentTransition.hashCodeCameraIdOut == currentCam.second)
             {
-                cout << currentTransition.exitVectorOrigin << "  " << currentTransition.exitVectorEnd << endl;
                 Point pt1(currentTransition.exitVectorOrigin[0], currentTransition.exitVectorOrigin[1]);
                 Point pt2(currentTransition.exitVectorEnd[0],    currentTransition.exitVectorEnd[1]);
 
                 // Plot the arrow into the right cam
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
+                cv::circle(camImgs.at(currentCam.first), pt2, 2, color);
             }
 
             // Has an entrance
@@ -811,6 +810,7 @@ void ReidManager::plotTransitions()
 
                 // Plot the arrow into the right cam
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, color);
+                cv::circle(camImgs.at(currentCam.first), pt2, 2, color);
             }
         }
     }
