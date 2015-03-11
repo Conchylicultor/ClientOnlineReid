@@ -820,6 +820,9 @@ void ReidManager::plotTransitions()
         Scalar colorExit(0,255,255);
         Scalar colorEntrance(255,255,0);
 
+        Scalar colorSolitary(55,64,42); // Color if the transition is one way (ex: just disappearance)
+        Scalar colorArrow; // Final color (= solitary or random depending of the transition)
+
         for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
         {
             // Has an exit
@@ -829,7 +832,15 @@ void ReidManager::plotTransitions()
                 Point pt2(currentTransition.exitVectorEnd[0],    currentTransition.exitVectorEnd[1]);
 
                 // Plot the arrow into the right cam
-                cv::line(camImgs.at(currentCam.first), pt1, pt2, color, 2);
+                if(currentTransition.hashCodeCameraIdIn)
+                {
+                    colorArrow = color;
+                }
+                else
+                {
+                    colorArrow = colorSolitary;
+                }
+                cv::line(camImgs.at(currentCam.first), pt1, pt2, colorArrow, 2);
                 cv::circle(camImgs.at(currentCam.first), pt2, 5, colorEntrance);
             }
 
@@ -840,7 +851,15 @@ void ReidManager::plotTransitions()
                 Point pt2(currentTransition.entranceVectorEnd[0],    currentTransition.entranceVectorEnd[1]);
 
                 // Plot the arrow into the right cam
-                cv::line(camImgs.at(currentCam.first), pt1, pt2, color, 2);
+                if(currentTransition.hashCodeCameraIdOut)
+                {
+                    colorArrow = color;
+                }
+                else
+                {
+                    colorArrow = colorSolitary;
+                }
+                cv::line(camImgs.at(currentCam.first), pt1, pt2, colorArrow, 2);
                 cv::circle(camImgs.at(currentCam.first), pt2, 5, colorExit);
             }
         }
