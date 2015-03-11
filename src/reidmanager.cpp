@@ -23,7 +23,8 @@ struct ElemTraining
     int same; // Positive or negative sample
 };
 
-ReidManager::ReidManager()
+ReidManager::ReidManager() :
+    calibrationActive(true)
 {
     Features::getInstance(); // Initialize the features (train the svm,...)
     std::srand ( unsigned ( std::time(0) ) );
@@ -80,11 +81,12 @@ void ReidManager::computeNext()
 
         for(PersonElement &currentPers : database)
         {
-            if(currentPers.hashId == hashSeqId)
+            if(currentPers.hashId == hashSeqId || calibrationActive) // If calibration mode is activated, we concider there is just one person into the camera
             {
                 currentPers.features.insert(currentPers.features.end(), listCurrentSequenceFeatures.begin(), listCurrentSequenceFeatures.end());
                 currentPers.camInfosList.push_back(currentSequenceCamInfos);
                 newPers = false;
+                break; // We only add the person once !
             }
         }
 
@@ -249,6 +251,20 @@ bool ReidManager::eventHandler()
     {
         cout << "Calibrations of the cameras..." << endl;
         recordTransitions();
+        cout << "Done" << endl;
+    }
+    else if(key == 's' && currentMode == ReidMode::TRAINING)
+    {
+        cout << "Switch calibrations mode..." << endl;
+        calibrationActive = !calibrationActive;
+        if(calibrationActive)
+        {
+            cout << "Calibration mode activated!" << endl;
+        }
+        else
+        {
+            cout << "Calibration mode desactivated!" << endl;
+        }
         cout << "Done" << endl;
     }
     else if(key == 'p' && currentMode == ReidMode::TRAINING)
@@ -801,6 +817,9 @@ void ReidManager::plotTransitions()
         color[1] = std::rand() % 255;
         color[2] = std::rand() % 255;
 
+        Scalar colorExit(0,255,255);
+        Scalar colorEntrance(255,255,0);
+
         for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
         {
             // Has an exit
@@ -811,7 +830,7 @@ void ReidManager::plotTransitions()
 
                 // Plot the arrow into the right cam
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, color, 2);
-                cv::circle(camImgs.at(currentCam.first), pt2, 3, color);
+                cv::circle(camImgs.at(currentCam.first), pt2, 5, colorEntrance);
             }
 
             // Has an entrance
@@ -822,7 +841,7 @@ void ReidManager::plotTransitions()
 
                 // Plot the arrow into the right cam
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, color, 2);
-                cv::circle(camImgs.at(currentCam.first), pt2, 3, color);
+                cv::circle(camImgs.at(currentCam.first), pt2, 5, colorExit);
             }
         }
     }

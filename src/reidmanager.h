@@ -92,6 +92,7 @@ private:
     void plotEvaluation();
 
     ReidMode currentMode;
+    bool calibrationActive;
     vector<PersonElement> database;
 
     vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
