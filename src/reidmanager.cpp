@@ -791,23 +791,28 @@ void ReidManager::plotEvaluation()
 
 void ReidManager::plotTransitions()
 {
-    vector<Mat> camImgs(Features::getInstance().getCameraMap().size());
+    vector<Mat> backgroundImgs(Features::getInstance().getCameraMap().size());
+    vector<Mat> camImgs(Features::getInstance().getCameraMap().size()); // Only one transition
+    vector<Mat> finalImgs(Features::getInstance().getCameraMap().size()); // All transitions
 
     // Loading background image
     for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
     {
-        cv::Mat backgroundImg = imread("../../Data/Models/background_" + std::to_string(currentCam.second) + ".png", CV_LOAD_IMAGE_GRAYSCALE); // No color for better vision
-
-        camImgs.at(currentCam.first).create(backgroundImg.size(), CV_8UC3);
-
-        cv::cvtColor(backgroundImg, camImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
-
-        if(!camImgs.at(currentCam.first).data)
+        backgroundImgs.at(currentCam.first) = imread("../../Data/Models/background_" + std::to_string(currentCam.second) + ".png", CV_LOAD_IMAGE_GRAYSCALE); // No color for better vision
+        if(!backgroundImgs.at(currentCam.first).data)
         {
             cout << "Error: no background image for the cam: " << currentCam.second << ", loading default background..." << endl;
-            camImgs.at(currentCam.first) = Mat::zeros(Size(640,480),CV_8UC3);
+            backgroundImgs.at(currentCam.first) = Mat::zeros(Size(640,480),CV_8UC1);
         }
+
+        camImgs.  at(currentCam.first).create(backgroundImgs.at(currentCam.first).size(), CV_8UC3);
+
+        finalImgs.at(currentCam.first).create(backgroundImgs.at(currentCam.first).size(), CV_8UC3);
+
+        cv::cvtColor(backgroundImgs.at(currentCam.first), finalImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
     }
+
+    int idTransition = 0; // For saving the transition
 
     for(TransitionElement const &currentTransition : listTransitions)
     {
@@ -817,14 +822,17 @@ void ReidManager::plotTransitions()
         color[1] = std::rand() % 255;
         color[2] = std::rand() % 255;
 
-        Scalar colorExit(0,255,255);
-        Scalar colorEntrance(255,255,0);
+        Scalar colorExit(0,0,255);
+        Scalar colorEntrance(255,0,0);
 
-        Scalar colorSolitary(55,64,42); // Color if the transition is one way (ex: just disappearance)
+        Scalar colorSolitary(255,0,250); // Color if the transition is one way (ex: just disappearance)
         Scalar colorArrow; // Final color (= solitary or random depending of the transition)
 
         for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
         {
+            // Clear the background
+            cv::cvtColor(backgroundImgs.at(currentCam.first), camImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
+
             // Has an exit
             if(currentTransition.hashCodeCameraIdOut == currentCam.second)
             {
@@ -842,6 +850,12 @@ void ReidManager::plotTransitions()
                 }
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, colorArrow, 2);
                 cv::circle(camImgs.at(currentCam.first), pt2, 5, colorEntrance);
+
+                cv::line(finalImgs.at(currentCam.first), pt1, pt2, colorArrow, 2);
+                cv::circle(finalImgs.at(currentCam.first), pt2, 5, colorEntrance);
+
+                // Save the image
+                imwrite("../../Data/Transitions/trans_" + to_string(idTransition) + "_" + to_string(currentCam.first) + ".png", camImgs.at(currentCam.first));
             }
 
             // Has an entrance
@@ -861,12 +875,20 @@ void ReidManager::plotTransitions()
                 }
                 cv::line(camImgs.at(currentCam.first), pt1, pt2, colorArrow, 2);
                 cv::circle(camImgs.at(currentCam.first), pt2, 5, colorExit);
+
+                cv::line(finalImgs.at(currentCam.first), pt1, pt2, colorArrow, 2);
+                cv::circle(finalImgs.at(currentCam.first), pt2, 5, colorExit);
+
+                // Save the image
+                imwrite("../../Data/Transitions/trans_" + to_string(idTransition) + "_" + to_string(currentCam.first) + ".png", camImgs.at(currentCam.first));
             }
         }
+
+        idTransition++;
     }
 
     for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
     {
-        imshow("Transition: " + std::to_string(currentCam.second), camImgs.at(currentCam.first));
+        imshow("Transition: " + std::to_string(currentCam.second), finalImgs.at(currentCam.first));
     }
 }
