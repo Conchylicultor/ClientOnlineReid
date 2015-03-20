@@ -7,6 +7,21 @@
 using namespace std;
 using namespace cv;
 
+struct TransitionElement
+{
+    // Information on the first stage of the transition (leave the camera)
+    size_t hashCodeCameraIdOut;
+    cv::Vec2f exitVectorOrigin;
+    cv::Vec2f exitVectorEnd;
+
+    // Information on the final stage of the transition (reappearance)
+    size_t hashCodeCameraIdIn;
+    cv::Vec2f entranceVectorOrigin;
+    cv::Vec2f entranceVectorEnd;
+
+    int transitionDuration; // Can be negative if the person reappear in a camera before leaving the previous one
+};
+
 struct CamInfoElement
 {
     size_t hashCodeCameraId;
@@ -30,17 +45,20 @@ public:
                       size_t &offset, // Modify the offset value
                       CamInfoElement &cameraInfo) const;
 
+    void recordTransitions(const vector<vector<CamInfoElement> > &listSequencePerson);
+    void plotTransitions();
+
     void checkCamera(const CamInfoElement &elem); // Add a camera eventually to the list
     void saveCameraMap() const;
     void clearCameraMap();
-    std::map<int, size_t> getCameraMap() const;
 
 private:
     Transition();
 
-    void loadCameraMap(); // TODO: When this function is called (same time as load machine learning)
+    void loadCameraMap();
 
     std::map<int, size_t> cameraMap;
+    vector<TransitionElement> listTransitions;
 };
 
 #endif // TRANSITION_H

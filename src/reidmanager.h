@@ -13,22 +13,6 @@ using namespace std;
 
 enum class ReidMode {RELEASE, TRAINING, TESTING};
 
-
-struct TransitionElement
-{
-    // Information on the first stage of the transition (leave the camera)
-    size_t hashCodeCameraIdOut;
-    cv::Vec2f exitVectorOrigin;
-    cv::Vec2f exitVectorEnd;
-
-    // Information on the final stage of the transition (reappearance)
-    size_t hashCodeCameraIdIn;
-    cv::Vec2f entranceVectorOrigin;
-    cv::Vec2f entranceVectorEnd;
-
-    int transitionDuration; // Can be negative if the person reappear in a camera before leaving the previous one
-};
-
 struct SequenceElement
 {
     vector<FeaturesElement> features;
@@ -37,7 +21,7 @@ struct SequenceElement
 
 struct PersonElement
 {
-    vector<FeaturesElement> features;
+    vector<FeaturesElement> features; // TODO: Replace those lines by vector<SequenceElement>
     vector<CamInfoElement> camInfoList;
     string name;
     size_t hashId;
@@ -78,7 +62,7 @@ private:
 
     void selectPairs(Mat &dataSet, Mat &classesSet);
 
-    void recordReceivedData(); // Just encapsulate the two following functions
+    void recordReceivedData(); // Just encapsulate the two following functions (recordTrainingSet and recordTransition)
     void recordTrainingSet();
     void recordTransitions();
 
@@ -92,12 +76,6 @@ private:
     vector<PersonElement> database;
 
     vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
-
-    // TODO: Temporary ?
-    // Move this code (and the declaration of the transition element) in a separate class (new Transition class or into the Feature class ?)
-    // TODO: Cleanup all the transitions allusions in the Feature class (distance computation, record traning, )
-    void plotTransitions();
-    vector<TransitionElement> listTransitions;
 };
 
 #endif // REIDMANAGER_H
