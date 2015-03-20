@@ -24,7 +24,7 @@ struct ElemTraining
 };
 
 ReidManager::ReidManager() :
-    calibrationActive(true)
+    calibrationActive(false)
 {
     Features::getInstance(); // Initialize the features (train the svm,...)
     std::srand ( unsigned ( std::time(0) ) );
@@ -253,7 +253,7 @@ bool ReidManager::eventHandler()
         recordTransitions();
         cout << "Done" << endl;
     }
-    else if(key == 's' && currentMode == ReidMode::TRAINING)
+    else if(key == 'a' && currentMode == ReidMode::TRAINING)
     {
         cout << "Switch calibrations mode..." << endl;
         calibrationActive = !calibrationActive;

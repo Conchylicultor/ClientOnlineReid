@@ -72,7 +72,7 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
         // We add the categorical feature. For instance (0,0,1,0) for cam3 or (1,0,0,0) for cam1
         dimentionFeatureVector += cameraMap.size()*2; // Factor 2 is for entrance camera and exit camera
         dimentionFeatureVector += 1; // For the duration between entrance and exit time
-        dimentionFeatureVector += 2; // For the entrance and exit vector (dim 1 because converted to angle)
+        dimentionFeatureVector += 8; // For the entrance and exit vector (2 for each points)
     }
 
     rowFeatureVector = cv::Mat::zeros(1, dimentionFeatureVector, CV_32FC1);
@@ -162,14 +162,17 @@ void Features::computeDistance(const FeaturesElement &elem1, const FeaturesEleme
         currentIndexFeature++;
 
         // Entrance and exit vector
-        /* TODO:
-        Vec2f cartX(firstElem->exitVector[0], lastElem->exitVector[0]);
-        Vec2f cartY(firstElem->exitVector[1], lastElem->exitVector[1]);
-        Vec2f polAngle;
-        cv::cartToPolar(cartX, cartY, Vec2f(), polAngle);
-        rowFeatureVector.at<float>(0, currentIndexFeature+0) = polAngle[0];
-        rowFeatureVector.at<float>(0, currentIndexFeature+1) = polAngle[1];
-        currentIndexFeature += 2;*/
+        rowFeatureVector.at<float>(0, currentIndexFeature+0) = firstElem->exitVectorOrigin[0];
+        rowFeatureVector.at<float>(0, currentIndexFeature+1) = firstElem->exitVectorOrigin[1];
+        rowFeatureVector.at<float>(0, currentIndexFeature+2) = firstElem->exitVectorEnd[0];
+        rowFeatureVector.at<float>(0, currentIndexFeature+3) = firstElem->exitVectorEnd[1];
+        currentIndexFeature += 4;
+
+        rowFeatureVector.at<float>(0, currentIndexFeature+0) = lastElem->entranceVectorOrigin[0];
+        rowFeatureVector.at<float>(0, currentIndexFeature+1) = lastElem->entranceVectorOrigin[1];
+        rowFeatureVector.at<float>(0, currentIndexFeature+2) = lastElem->entranceVectorEnd[0];
+        rowFeatureVector.at<float>(0, currentIndexFeature+3) = lastElem->entranceVectorEnd[1];
+        currentIndexFeature += 4;
     }
 
     // The feature scaling is not made in this function
