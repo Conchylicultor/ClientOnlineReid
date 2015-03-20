@@ -8,7 +8,8 @@ QMAKE_CXXFLAGS += -std=c++11
 SOURCES += src/main.cpp \
     src/exchangemanager.cpp \
     src/features.cpp \
-    src/reidmanager.cpp
+    src/reidmanager.cpp \
+    src/transition.cpp
 
 LIBS += -lmosquittopp
 LIBS += `pkg-config opencv --libs`
@@ -16,4 +17,5 @@ LIBS += `pkg-config opencv --libs`
 HEADERS += \
     src/exchangemanager.h \
     src/features.h \
-    src/reidmanager.h
+    src/reidmanager.h \
+    src/transition.h

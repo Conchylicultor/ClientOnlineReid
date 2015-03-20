@@ -30,15 +30,6 @@ struct FeaturesElement
     // Frame attributes
     array<Mat, 3> histogramChannels;
     array<MajorColorElem, NB_MAJOR_COLORS_EXTRACT> majorColors;
-
-    // Global attributes
-    size_t hashCodeCameraId;
-    int beginDate;
-    int endDate;
-    cv::Vec2f entranceVectorOrigin;
-    cv::Vec2f entranceVectorEnd;
-    cv::Vec2f exitVectorOrigin;
-    cv::Vec2f exitVectorEnd;
 };
 
 size_t reconstructHashcode(const float *array); // Reconstruct the received hashcode from 2 float received in the array
@@ -56,11 +47,6 @@ public:
                       size_t sizeArray,
                       vector<FeaturesElement> &listFeatures) const;
 
-    void checkCamera(const FeaturesElement &elem); // Add a camera eventually to the list
-    void saveCameraMap(FileStorage &fileTraining) const;
-    void clearCameraMap();
-    std::map<int, size_t> getCameraMap() const;
-
     void setScaleFactors(const Mat &newValue);
 
     void loadMachineLearning();
@@ -73,8 +59,6 @@ private:
     CvSVM svm;
 
     Mat scaleFactors;
-
-    std::map<int, size_t> cameraMap;
 };
 
 #endif // FEATURES_H

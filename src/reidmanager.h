@@ -6,23 +6,13 @@
 #include <vector>
 
 #include "features.h"
+#include "transition.h"
 
 using namespace std;
 
 
 enum class ReidMode {RELEASE, TRAINING, TESTING};
 
-
-struct CamInfosElement
-{
-    size_t hashCodeCameraId;
-    int beginDate;
-    int endDate;
-    cv::Vec2f entranceVectorOrigin;
-    cv::Vec2f entranceVectorEnd;
-    cv::Vec2f exitVectorOrigin;
-    cv::Vec2f exitVectorEnd;
-};
 
 struct TransitionElement
 {
@@ -39,10 +29,16 @@ struct TransitionElement
     int transitionDuration; // Can be negative if the person reappear in a camera before leaving the previous one
 };
 
+struct SequenceElement
+{
+    vector<FeaturesElement> features;
+    CamInfoElement camInfo;
+};
+
 struct PersonElement
 {
     vector<FeaturesElement> features;
-    vector<CamInfosElement> camInfosList;
+    vector<CamInfoElement> camInfoList;
     string name;
     size_t hashId;
 };

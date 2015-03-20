@@ -27,6 +27,7 @@ ReidManager::ReidManager() :
     calibrationActive(false)
 {
     Features::getInstance(); // Initialize the features (train the svm,...)
+    Transition::getInstance(); // Same for the transitions (camera list,...)
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
@@ -52,28 +53,18 @@ void ReidManager::computeNext()
 
     size_t hashSeqId = reconstructHashcode(&arrayReceived[0]); // Get the id of the sequence
 
-    vector<FeaturesElement> listCurrentSequenceFeatures;
-    CamInfosElement currentSequenceCamInfos;
+    SequenceElement currentSequence;
+
     size_t offset = 2; // The other ofsets values are extracted on the next function
-    Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, listCurrentSequenceFeatures);
-    // TODO Cleanup: Merge CameraInfos and list<FeaturesElement> into a struct SequenceElem
-    // TODO Cleanup: Get instance Transitions and extract camera infos ; Remove folowing code:
-    FeaturesElement extractCamInfos = listCurrentSequenceFeatures.front();
-    currentSequenceCamInfos.hashCodeCameraId = extractCamInfos.hashCodeCameraId;
-    currentSequenceCamInfos.beginDate = extractCamInfos.beginDate;
-    currentSequenceCamInfos.endDate = extractCamInfos.endDate;
-    currentSequenceCamInfos.entranceVectorOrigin = extractCamInfos.entranceVectorOrigin;
-    currentSequenceCamInfos.entranceVectorEnd = extractCamInfos.entranceVectorEnd;
-    currentSequenceCamInfos.exitVectorOrigin = extractCamInfos.exitVectorOrigin;
-    currentSequenceCamInfos.exitVectorEnd = extractCamInfos.exitVectorEnd;
-    // End Removing
+    Transition::getInstance().extractArray(&arrayReceived[offset], offset, currentSequence.camInfo); // Has to be call before the feature extraction (modify the offset value)
+    Features::getInstance().extractArray(&arrayReceived[offset], sizeArray-offset, currentSequence.features);
 
     delete arrayReceived;
 
     if(currentMode == ReidMode::TRAINING) // For computing or evaluate the result of our binary classifier
     {
         // Check if there is a new camera
-        Features::getInstance().checkCamera(listCurrentSequenceFeatures.front());
+        Transition::getInstance().checkCamera(currentSequence.camInfo);
 
         // We simply add the person to the dataset
 
@@ -83,8 +74,8 @@ void ReidManager::computeNext()
         {
             if(currentPers.hashId == hashSeqId || calibrationActive) // If calibration mode is activated, we concider there is just one person into the camera
             {
-                currentPers.features.insert(currentPers.features.end(), listCurrentSequenceFeatures.begin(), listCurrentSequenceFeatures.end());
-                currentPers.camInfosList.push_back(currentSequenceCamInfos);
+                currentPers.features.insert(currentPers.features.end(), currentSequence.features.begin(), currentSequence.features.end());
+                currentPers.camInfoList.push_back(currentSequence.camInfo);
                 newPers = false;
                 break; // We only add the person once !
             }
@@ -95,8 +86,8 @@ void ReidManager::computeNext()
         {
             // Add the new person to the database
             database.push_back(PersonElement());
-            database.back().features.swap(listCurrentSequenceFeatures);
-            database.back().camInfosList.push_back(currentSequenceCamInfos);
+            database.back().features.swap(currentSequence.features); // Can be done because a new person has an empty list
+            database.back().camInfoList.push_back(currentSequence.camInfo);
             database.back().name = std::to_string(hashSeqId);
             database.back().hashId = hashSeqId;
         }
@@ -142,12 +133,15 @@ void ReidManager::computeNext()
             float meanPrediction = 0.0;
             for(FeaturesElement featuresDatabase : currentPers.features)
             {
-                for(FeaturesElement featuresSequence : listCurrentSequenceFeatures)
+                for(FeaturesElement featuresSequence : currentSequence.features)
                 {
                     meanPrediction += Features::getInstance().predict(featuresDatabase, featuresSequence);
                 }
             }
-            meanPrediction /= (currentPers.features.size() * listCurrentSequenceFeatures.size());
+            meanPrediction /= (currentPers.features.size() * currentSequence.features.size());
+
+            // Check the transition
+            //Transition::getInstance().predict();
 
             // Match. Update database ?
             if(meanPrediction > thresholdValueSamePerson)
@@ -196,7 +190,7 @@ void ReidManager::computeNext()
 
             // Add the new person to the database
             database.push_back(PersonElement());
-            database.back().features.swap(listCurrentSequenceFeatures);
+            database.back().features.swap(currentSequence.features); // Can be swapped because the new person has an empty list
             database.back().name = std::to_string(database.size());
             database.back().hashId = hashSeqId;
 
@@ -390,7 +384,7 @@ void ReidManager::setMode(const ReidMode &newMode)
     {
         cout << "training";
         // Clear the cameraMap (we learn from a clear)
-        Features::getInstance().clearCameraMap();
+        Transition::getInstance().clearCameraMap();
     }
     else if(currentMode == ReidMode::TESTING)
     {
@@ -552,41 +546,44 @@ void ReidManager::recordTrainingSet()
     fileTraining << "trainingClasses" << trainingClasses;
     fileTraining << "scaleFactors" << scaleFactors;
 
-    Features::getInstance().saveCameraMap(fileTraining);
-
     fileTraining.release();
+
+    Transition::getInstance().saveCameraMap();
 }
 
 void ReidManager::recordTransitions()
 {
     cout << "Record transitions" << endl;
+
+    listTransitions.clear(); // We don't want use previous transitions
+
     for(PersonElement const &currentPerson : database)
     {
-        for(size_t i = 0 ; i < currentPerson.camInfosList.size() ; ++i)
+        for(size_t i = 0 ; i < currentPerson.camInfoList.size() ; ++i)
         {
             // TODO: What is the best way to determine the transitions ? Can the algorithm be improved ?
             // Can we have multiple valid transitions for one sequence (not just between two cameras) ?
 
             // Looking for the smallest transition
-            int closestCamInfos = -1;
-            int closestCamInfosDuration = -1;
-            for(size_t j = 0 ; j < currentPerson.camInfosList.size() ; ++j)
+            int closestCamInfo = -1;
+            int closestCamInfoDuration = -1;
+            for(size_t j = 0 ; j < currentPerson.camInfoList.size() ; ++j)
             {
                 // Find the shortest transition
-                if(i != j && currentPerson.camInfosList.at(i).beginDate < currentPerson.camInfosList.at(j).beginDate)
+                if(i != j && currentPerson.camInfoList.at(i).beginDate < currentPerson.camInfoList.at(j).beginDate)
                 {
-                    int currentDuration = currentPerson.camInfosList.at(j).beginDate - currentPerson.camInfosList.at(i).beginDate; // > 0 (due to previous condition)
+                    int currentDuration = currentPerson.camInfoList.at(j).beginDate - currentPerson.camInfoList.at(i).beginDate; // > 0 (due to previous condition)
 
                     // First time
-                    if(closestCamInfos == -1)
+                    if(closestCamInfo == -1)
                     {
-                        closestCamInfosDuration = currentDuration;
-                        closestCamInfos = j;
+                        closestCamInfoDuration = currentDuration;
+                        closestCamInfo = j;
                     }
-                    else if(currentDuration < closestCamInfosDuration)
+                    else if(currentDuration < closestCamInfoDuration)
                     {
-                        closestCamInfosDuration = currentDuration;
-                        closestCamInfos = j;
+                        closestCamInfoDuration = currentDuration;
+                        closestCamInfo = j;
                     }
                 }
             }
@@ -595,16 +592,16 @@ void ReidManager::recordTransitions()
             TransitionElement newTransition;
 
             // The transition is between an exit and a re-entrance
-            const CamInfosElement &camInfoElemtOut = currentPerson.camInfosList.at(i);
+            const CamInfoElement &camInfoElemtOut = currentPerson.camInfoList.at(i);
             newTransition.hashCodeCameraIdOut = camInfoElemtOut.hashCodeCameraId;
             newTransition.exitVectorOrigin = camInfoElemtOut.exitVectorOrigin;
             newTransition.exitVectorEnd = camInfoElemtOut.exitVectorEnd;
 
             // Match
-            if(closestCamInfos != -1)
+            if(closestCamInfo != -1)
             {
                 // The transition is between an exit and a re-entrance
-                const CamInfosElement &camInfoElemtIn = currentPerson.camInfosList.at(closestCamInfos);
+                const CamInfoElement &camInfoElemtIn = currentPerson.camInfoList.at(closestCamInfo);
                 newTransition.hashCodeCameraIdIn = camInfoElemtIn.hashCodeCameraId;
                 newTransition.entranceVectorOrigin = camInfoElemtIn.entranceVectorOrigin;
                 newTransition.entranceVectorEnd = camInfoElemtIn.entranceVectorEnd;
@@ -616,12 +613,12 @@ void ReidManager::recordTransitions()
                    newTransition.transitionDuration < transitionDurationMin)
                 {
                     cout << "Transition too long(disappearance): " << newTransition.transitionDuration << endl;
-                    closestCamInfos = -1; // Add the transition as disappearance transition
+                    closestCamInfo = -1; // Add the transition as disappearance transition
                 }
             }
 
             // No match: disappearance
-            if(closestCamInfos == -1)
+            if(closestCamInfo == -1)
             {
                 newTransition.hashCodeCameraIdIn = 0; // < No reappareance
                 newTransition.entranceVectorOrigin = cv::Vec2f(0.0, 0.0);
@@ -711,6 +708,7 @@ void ReidManager::trainAndTestSet()
 
     // Retrain the classifier
     Features::getInstance().loadMachineLearning();
+    // (No training for the transitions)
 
     // Testing
     cout << "Testing" << endl;
@@ -791,12 +789,13 @@ void ReidManager::plotEvaluation()
 
 void ReidManager::plotTransitions()
 {
-    vector<Mat> backgroundImgs(Features::getInstance().getCameraMap().size());
-    vector<Mat> camImgs(Features::getInstance().getCameraMap().size()); // Only one transition
-    vector<Mat> finalImgs(Features::getInstance().getCameraMap().size()); // All transitions
+    const std::map<int, size_t> &cameraTransitionMap = Transition::getInstance().getCameraMap();
+    vector<Mat> backgroundImgs(cameraTransitionMap.size());
+    vector<Mat> camImgs(cameraTransitionMap.size()); // Only one transition
+    vector<Mat> finalImgs(cameraTransitionMap.size()); // All transitions
 
     // Loading background image
-    for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
+    for(pair<int, size_t> currentCam : cameraTransitionMap) // For each camera
     {
         backgroundImgs.at(currentCam.first) = imread("../../Data/Models/background_" + std::to_string(currentCam.second) + ".png", CV_LOAD_IMAGE_GRAYSCALE); // No color for better vision
         if(!backgroundImgs.at(currentCam.first).data)
@@ -828,7 +827,7 @@ void ReidManager::plotTransitions()
         Scalar colorSolitary(255,0,250); // Color if the transition is one way (ex: just disappearance)
         Scalar colorArrow; // Final color (= solitary or random depending of the transition)
 
-        for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
+        for(pair<int, size_t> currentCam : cameraTransitionMap) // For each camera
         {
             // Clear the background
             cv::cvtColor(backgroundImgs.at(currentCam.first), camImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
@@ -887,7 +886,7 @@ void ReidManager::plotTransitions()
         idTransition++;
     }
 
-    for(pair<int, size_t> currentCam : Features::getInstance().getCameraMap()) // For each camera
+    for(pair<int, size_t> currentCam : cameraTransitionMap) // For each camera
     {
         imshow("Transition: " + std::to_string(currentCam.second), finalImgs.at(currentCam.first));
     }
