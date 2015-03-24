@@ -21,7 +21,8 @@ struct ElemTraining
 };
 
 ReidManager::ReidManager() :
-    calibrationActive(false)
+    calibrationActive(false),
+    debugMode(true)
 {
     Features::getInstance(); // Initialize the features (train the svm,...)
     Transition::getInstance(); // Same for the transitions (camera list,...)
@@ -141,7 +142,11 @@ void ReidManager::computeNext()
             //Transition::getInstance().predict();
 
             // Match. Update database ?
-            if(meanPrediction > thresholdValueSamePerson)
+
+            bool match = meanPrediction > thresholdValueSamePerson;
+            bool matchError = false; // For debugging
+
+            if(match)
             {
                 cout << "Match (" << meanPrediction << ") : " << currentPers.hashId;
                 newPers = false;
@@ -151,6 +156,8 @@ void ReidManager::computeNext()
                     if(currentPers.hashId != hashSeqId) // False positive
                     {
                         cout << " <<< ERROR";
+
+                        matchError = true;
 
                         listEvaluation.back().nbError++;
                         listEvaluation.back().nbErrorFalsePositiv++;
@@ -172,11 +179,19 @@ void ReidManager::computeNext()
                 {
                     cout << " <<< ERROR";
 
+                    matchError = true;
+
                     listEvaluation.back().nbError++;
                     listEvaluation.back().nbErrorFalseNegativ++;
                     nbErrorClone++;
                 }
                 cout << endl;
+            }
+
+            // Record the results for checking
+            if(debugMode)
+            {
+                plotDebugging(currentSequence, currentPers, match, matchError);
             }
         }
 
@@ -280,6 +295,20 @@ bool ReidManager::eventHandler()
     {
         cout << "Plot the evaluation data..." << endl;
         plotEvaluation();
+        cout << "Done" << endl;
+    }
+    else if(key == 'd' && (currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE))
+    {
+        cout << "Switch debug mode..." << endl;
+        debugMode = !debugMode;
+        if(debugMode)
+        {
+            cout << "Debug mode activated!" << endl;
+        }
+        else
+        {
+            cout << "Debug mode desactivated!" << endl;
+        }
         cout << "Done" << endl;
     }
     else if(key == 'q')
@@ -688,4 +717,9 @@ void ReidManager::plotEvaluation()
     // Display
     namedWindow("Evaluation Results", CV_WINDOW_AUTOSIZE);
     imshow("Evaluation Results", imgEval);
+}
+
+void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, bool same, bool error)
+{
+    string filenameDebug = "../../Data/Debug/Results/";
 }

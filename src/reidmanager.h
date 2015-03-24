@@ -70,9 +70,11 @@ private:
     void trainAndTestSet();
 
     void plotEvaluation();
+    void plotDebugging(SequenceElement sequence, PersonElement person, bool same, bool error=false); // Save the results on disk
 
     ReidMode currentMode;
     bool calibrationActive;
+    bool debugMode; // Save the images for checking the recognition
     vector<PersonElement> database;
 
     vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
