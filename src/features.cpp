@@ -29,6 +29,7 @@ Features &Features::getInstance()
 Features::Features() :
     sizeElementArray(0)
 {
+    sizeElementArray += 3; // Image id information
     sizeElementArray += 3*HIST_SIZE; // Histogram size
     sizeElementArray += NB_MAJOR_COLORS_EXTRACT*3; // Major colors
 
@@ -113,6 +114,12 @@ void Features::extractArray(const float *array, size_t sizeArray, vector<Feature
     {
         listFeatures.push_back(FeaturesElement());
         FeaturesElement &currentElem = listFeatures.back();
+
+        // Image id information
+        currentElem.clientId     = array[currentId + 0];
+        currentElem.silhouetteId = array[currentId + 1];
+        currentElem.imageId      = array[currentId + 2];
+        currentId += 3;
 
         // Histogram
         for(size_t channelId = 0 ; channelId < 3 ; ++channelId)

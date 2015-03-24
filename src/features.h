@@ -30,6 +30,11 @@ struct FeaturesElement
     // Frame attributes
     array<Mat, 3> histogramChannels;
     array<MajorColorElem, NB_MAJOR_COLORS_EXTRACT> majorColors;
+
+    // Image id information
+    int clientId;
+    int silhouetteId;
+    int imageId;
 };
 
 size_t reconstructHashcode(const float *array); // Reconstruct the received hashcode from 2 float received in the array
