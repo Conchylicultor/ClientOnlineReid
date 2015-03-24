@@ -238,7 +238,7 @@ void Transition::plotTransitions()
                 cv::circle(finalImgs.at(currentCam.first), pt2, 5, colorExit);
 
                 // Save the image
-                imwrite("../../Data/Transitions/trans_" + to_string(idTransition) + "_" + to_string(currentCam.first) + ".png", camImgs.at(currentCam.first));
+                imwrite("../../Data/Debug/Transitions/trans_" + to_string(idTransition) + "_" + to_string(currentCam.first) + ".png", camImgs.at(currentCam.first));
             }
         }
 
