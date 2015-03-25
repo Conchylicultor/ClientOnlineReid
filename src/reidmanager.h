@@ -59,6 +59,7 @@ private:
     float *reconstructArray(const string &seqId, size_t &sizeOut) const;
 
     void setMode(const ReidMode &newMode);
+    void setDebugMode(bool newMode);
 
     void selectPairs(Mat &dataSet, Mat &classesSet);
 

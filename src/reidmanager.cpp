@@ -21,15 +21,15 @@ struct ElemTraining
 };
 
 ReidManager::ReidManager() :
-    calibrationActive(false),
-    debugMode(true)
+    calibrationActive(false)
 {
     Features::getInstance(); // Initialize the features (train the svm,...)
     Transition::getInstance(); // Same for the transitions (camera list,...)
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
-    setMode(ReidMode::TRAINING); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
+    setMode(ReidMode::RELEASE); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
+    setDebugMode(true); // Record the result
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
 }
 
@@ -300,15 +300,7 @@ bool ReidManager::eventHandler()
     else if(key == 'd' && (currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE))
     {
         cout << "Switch debug mode..." << endl;
-        debugMode = !debugMode;
-        if(debugMode)
-        {
-            cout << "Debug mode activated!" << endl;
-        }
-        else
-        {
-            cout << "Debug mode desactivated!" << endl;
-        }
+        setDebugMode(!debugMode);
         cout << "Done" << endl;
     }
     else if(key == 'q')
@@ -419,6 +411,24 @@ void ReidManager::setMode(const ReidMode &newMode)
     cout << endl;
     // TODO: Clear database ?
     // TODO: Reload svm ?
+}
+
+void ReidManager::setDebugMode(bool newMode)
+{
+    debugMode = newMode;
+    if(debugMode)
+    {
+        // Clear the folders
+        system("exec rm ../../Data/Debug/Results/Difference/*");
+        system("exec rm ../../Data/Debug/Results/Difference_errors/*");
+        system("exec rm ../../Data/Debug/Results/Recognition/*");
+        system("exec rm ../../Data/Debug/Results/Recognition_errors/*");
+        cout << "Debug mode activated!" << endl;
+    }
+    else
+    {
+        cout << "Debug mode desactivated!" << endl;
+    }
 }
 
 void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
@@ -721,5 +731,124 @@ void ReidManager::plotEvaluation()
 
 void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, bool same, bool error)
 {
+    // Don't save if there is no error
+    if(currentMode == ReidMode::TESTING && !error)
+    {
+        return;
+    }
+
+    // Choose the destination
+
     string filenameDebug = "../../Data/Debug/Results/";
+
+    if(error && same)
+    {
+        filenameDebug += "Recognition_errors/";
+    }
+    else if(error && !same)
+    {
+        filenameDebug += "Difference_errors/";
+    }
+    else if(same)
+    {
+        filenameDebug += "Recognition/";
+    }
+    else
+    {
+        filenameDebug += "Difference/";
+    }
+
+    // Extract the sub images
+
+    vector<vector<Mat> > imageRows;
+    imageRows.push_back(vector<Mat>(sequence.features.size()*2));
+    imageRows.push_back(vector<Mat>(person.features.size()*2));
+
+    size_t i = 0;
+    size_t j = 0;
+
+    int debugImgSize [2][2] = {0}; // [row][width, height]
+
+    bool secondRow = false;
+    for(size_t compteurTot = 0 ; compteurTot < sequence.features.size() + person.features.size() ; ++compteurTot)
+    {
+        // Check if second row
+        if(j == 0 && compteurTot == sequence.features.size())
+        {
+            secondRow = true;
+            i = 0;
+            ++j;
+        }
+
+        const FeaturesElement *currentFeatureElem = nullptr;
+
+        // Choose the current feature element
+        if(!secondRow)
+        {
+            currentFeatureElem = &sequence.features.at(i);
+        }
+        else
+        {
+            currentFeatureElem = &person.features.at(i);
+        }
+
+        string filenameImage = "../../Data/Traces/"
+                + to_string(currentFeatureElem->clientId) + "_"
+                + to_string(currentFeatureElem->silhouetteId) + "_"
+                + to_string(currentFeatureElem->imageId);
+
+        Mat currentImage = imread(filenameImage + ".png");
+        Mat currentImageMask = imread(filenameImage + "_mask.png");
+
+        if(!currentImage.data || !currentImageMask.data)
+        {
+            cout << "Warning: cannot open images for debugging: " << filenameImage << endl;
+            return;
+        }
+
+        imageRows.at(j).at(2*i) = currentImage;
+        imageRows.at(j).at(2*i+1) = currentImageMask;
+
+        debugImgSize[j][0] += currentImage.cols*2;
+        debugImgSize[j][1] = std::max(debugImgSize[j][1], currentImage.rows);
+
+        ++i;
+    }
+
+    // Compute the debug image
+
+    Mat imgDebug(Size(std::max(debugImgSize[0][0], debugImgSize[1][0]),
+                      debugImgSize[0][1] + debugImgSize[1][1]),
+                 CV_8UC3, Scalar(200, 200, 200));
+
+    int currentX = 0;
+    int currentY = 0;
+
+    for(i = 0 ; i < imageRows.size() ; ++i)
+    {
+        currentX = 0;
+        for(j = 0 ; j < imageRows.at(i).size() ; ++j)
+        {
+
+            imageRows.at(i).at(j).copyTo(imgDebug(Rect(currentX, currentY, imageRows.at(i).at(j).cols, imageRows.at(i).at(j).rows)));
+            currentX += imageRows.at(i).at(j).cols;
+        }
+        currentY += debugImgSize[i][1];
+    }
+
+    // Record
+
+    imwrite(filenameDebug +
+            to_string(sequence.features.front().clientId) + "_" + to_string(sequence.features.front().silhouetteId) +
+            "_to_" + person.name + ".png", imgDebug);
+
+    // Free the memory
+
+    for(vector<Mat> &currentRow : imageRows)
+    {
+        for(Mat &currentImg : currentRow)
+        {
+            currentImg.release();
+        }
+    }
 }
