@@ -34,7 +34,7 @@ struct EvaluationElement
 
     // Y Datas
     int nbError;
-    int nbSuccess; // Final result
+    int nbCumulativeSuccess; // Nb of sequence correctly matched
 
     int nbErrorFalsePositiv;// << Database corrupted
     int nbErrorFalseNegativ;

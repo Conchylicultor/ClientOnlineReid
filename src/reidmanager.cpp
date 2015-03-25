@@ -104,13 +104,14 @@ void ReidManager::computeNext()
             newEvalElement.nbSequence = listEvaluation.size() + 1;
             // Y: Cumulative results
             newEvalElement.nbError             = listEvaluation.back().nbError;
-            newEvalElement.nbSuccess           = listEvaluation.back().nbSuccess;
+            newEvalElement.nbCumulativeSuccess = listEvaluation.back().nbCumulativeSuccess;
             newEvalElement.nbErrorFalsePositiv = listEvaluation.back().nbErrorFalsePositiv;
             newEvalElement.nbErrorFalseNegativ = listEvaluation.back().nbErrorFalseNegativ;
             newEvalElement.nbErrorPersonAdded  = listEvaluation.back().nbErrorPersonAdded;
             newEvalElement.nbErrorWithoutClone = listEvaluation.back().nbErrorWithoutClone;
             newEvalElement.nbClone             = listEvaluation.back().nbClone;
             newEvalElement.nbPersonAdded       = listEvaluation.back().nbPersonAdded;
+
             listEvaluation.push_back(newEvalElement);
 
             for(PersonElement currentPers : database)
@@ -165,6 +166,7 @@ void ReidManager::computeNext()
                     }
                     else
                     {
+                        listEvaluation.back().nbCumulativeSuccess++;
                         isRecognizeOnce = true; // At least once
                     }
                 }
@@ -184,6 +186,10 @@ void ReidManager::computeNext()
                     listEvaluation.back().nbError++;
                     listEvaluation.back().nbErrorFalseNegativ++;
                     nbErrorClone++;
+                }
+                else
+                {
+                    listEvaluation.back().nbCumulativeSuccess++;
                 }
                 cout << endl;
             }
@@ -689,8 +695,8 @@ void ReidManager::plotEvaluation()
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbError;
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbError;
-        color = Scalar(0, 255, 0);
-        putText(imgEval, "Errors (Cumulativ)", Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        color = Scalar(0, 0, 255);
+        putText(imgEval, "Errors (Cumulative)", Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalseNegativ;
@@ -702,10 +708,10 @@ void ReidManager::plotEvaluation()
         pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalsePositiv;
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalsePositiv;
         color = Scalar(0, 130, 255);
-        putText(imgEval, "False positiv", Point(10, 50), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        putText(imgEval, "False positive", Point(10, 50), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
 
-        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorWithoutClone;
+        /*pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorWithoutClone;
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorWithoutClone;
         color = Scalar(115, 32, 150);
         putText(imgEval, "Without clone", Point(10, 60), FONT_HERSHEY_SIMPLEX, 0.4, color);
@@ -715,12 +721,24 @@ void ReidManager::plotEvaluation()
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbClone;
         color = Scalar(73, 92, 17);
         putText(imgEval, "Clones", Point(10, 70), FONT_HERSHEY_SIMPLEX, 0.4, color);
-        line(imgEval, pt1, pt2, color);
+        line(imgEval, pt1, pt2, color);*/
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbError - evalElemPrev.nbError);
         pt2.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbError - evalElemPrev.nbError);
-        color = Scalar(255, 255, 0);
+        color = Scalar(0, 0, 255);
         putText(imgEval, "Errors", Point(10, 10), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbCumulativeSuccess - evalElemPrev.nbCumulativeSuccess);
+        pt2.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbCumulativeSuccess - evalElemPrev.nbCumulativeSuccess);
+        color = Scalar(0, 255, 0);
+        putText(imgEval, "Success", Point(10, 80), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbCumulativeSuccess;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbCumulativeSuccess;
+        color = Scalar(0, 255, 0);
+        putText(imgEval, "Success (Cumulative)", Point(10, 90), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
     }
 
