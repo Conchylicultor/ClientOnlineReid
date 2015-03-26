@@ -686,60 +686,70 @@ void ReidManager::plotEvaluation()
         pt2.x = stepHorizontalAxis * evalElemNext.nbSequence;
 
         Scalar color;
+        int posLegend = 10;
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbPersonAdded;
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbPersonAdded;
         color = Scalar(255, 0, 0);
-        putText(imgEval, "Person added", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        putText(imgEval, "Person added", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
+        posLegend += 10;
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbError;
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbError;
         color = Scalar(0, 0, 255);
-        putText(imgEval, "Errors (Cumulative)", Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        putText(imgEval, "Errors (Cumulative)", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
-
-        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalseNegativ;
-        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalseNegativ;
-        color = Scalar(0, 255, 255);
-        putText(imgEval, "False negativ", Point(10, 40), FONT_HERSHEY_SIMPLEX, 0.4, color);
-        line(imgEval, pt1, pt2, color);
-
-        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalsePositiv;
-        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalsePositiv;
-        color = Scalar(0, 130, 255);
-        putText(imgEval, "False positive", Point(10, 50), FONT_HERSHEY_SIMPLEX, 0.4, color);
-        line(imgEval, pt1, pt2, color);
-
-        /*pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorWithoutClone;
-        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorWithoutClone;
-        color = Scalar(115, 32, 150);
-        putText(imgEval, "Without clone", Point(10, 60), FONT_HERSHEY_SIMPLEX, 0.4, color);
-        line(imgEval, pt1, pt2, color);
-
-        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbClone;
-        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbClone;
-        color = Scalar(73, 92, 17);
-        putText(imgEval, "Clones", Point(10, 70), FONT_HERSHEY_SIMPLEX, 0.4, color);
-        line(imgEval, pt1, pt2, color);*/
+        posLegend += 10;
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbError - evalElemPrev.nbError);
         pt2.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbError - evalElemPrev.nbError);
         color = Scalar(0, 0, 255);
-        putText(imgEval, "Errors", Point(10, 10), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        putText(imgEval, "Errors", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
-
-        pt1.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbCumulativeSuccess - evalElemPrev.nbCumulativeSuccess);
-        pt2.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbCumulativeSuccess - evalElemPrev.nbCumulativeSuccess);
-        color = Scalar(0, 255, 0);
-        putText(imgEval, "Success", Point(10, 80), FONT_HERSHEY_SIMPLEX, 0.4, color);
-        line(imgEval, pt1, pt2, color);
+        posLegend += 10;
 
         pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbCumulativeSuccess;
         pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbCumulativeSuccess;
         color = Scalar(0, 255, 0);
-        putText(imgEval, "Success (Cumulative)", Point(10, 90), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        putText(imgEval, "Success (Cumulative)", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
+        posLegend += 10;
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbCumulativeSuccess - evalElemPrev.nbCumulativeSuccess);
+        pt2.y = windowsEvalHeight - stepVerticalAxis * (evalElemNext.nbCumulativeSuccess - evalElemPrev.nbCumulativeSuccess);
+        color = Scalar(0, 255, 0);
+        putText(imgEval, "Success", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+        posLegend += 10;
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalseNegativ;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalseNegativ;
+        color = Scalar(0, 255, 255);
+        putText(imgEval, "False negativ", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+        posLegend += 10;
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorFalsePositiv;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorFalsePositiv;
+        color = Scalar(0, 130, 255);
+        putText(imgEval, "False positive", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+        posLegend += 10;
+
+        /*pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbErrorWithoutClone;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbErrorWithoutClone;
+        color = Scalar(115, 32, 150);
+        putText(imgEval, "Without clone", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+        posLegend += 10;
+
+        pt1.y = windowsEvalHeight - stepVerticalAxis * evalElemPrev.nbClone;
+        pt2.y = windowsEvalHeight - stepVerticalAxis * evalElemNext.nbClone;
+        color = Scalar(73, 92, 17);
+        putText(imgEval, "Clones", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
+        line(imgEval, pt1, pt2, color);
+        posLegend += 10;*/
     }
 
     // Display
@@ -759,22 +769,21 @@ void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, 
 
     string filenameDebug = "../../Data/Debug/Results/";
 
-    if(error && same)
+    if(same)
     {
-        filenameDebug += "Recognition_errors/";
-    }
-    else if(error && !same)
-    {
-        filenameDebug += "Difference_errors/";
-    }
-    else if(same)
-    {
-        filenameDebug += "Recognition/";
+        filenameDebug += "Recognition";
     }
     else
     {
-        filenameDebug += "Difference/";
+        filenameDebug += "Difference";
     }
+
+    if(error)
+    {
+        filenameDebug += "_errors";
+    }
+
+    filenameDebug += "/";
 
     // Extract the sub images
 
