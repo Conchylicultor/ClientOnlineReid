@@ -8,6 +8,7 @@
 
 using namespace std;
 
+static const bool transitionsIncluded = true; // If true, the program will use the network topology information
 static const float thresholdValueSamePerson = 0.21;
 
 struct ElemTraining
@@ -23,14 +24,16 @@ struct ElemTraining
 ReidManager::ReidManager() :
     calibrationActive(false)
 {
-    Features::getInstance(); // Initialize the features (train the svm,...)
-    Transition::getInstance(); // Same for the transitions (camera list,...)
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_NORMAL);
 
-    setMode(ReidMode::RELEASE); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
+    Features::getInstance(); // Initialize the features (train the svm,...)
+    Transition::getInstance(); // Same for the transitions (camera list,...)
+
+    listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin for the evaluation
+
     setDebugMode(true); // Record the result
-    listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin
+    setMode(ReidMode::TESTING); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
 }
 
 void ReidManager::computeNext()
@@ -129,28 +132,35 @@ void ReidManager::computeNext()
 
         for(PersonElement currentPers : database)
         {
-            float meanPrediction = 0.0;
+            // Check the visual similarity
+            float similarityScore = 0.0;
             for(FeaturesElement featuresDatabase : currentPers.features)
             {
                 for(FeaturesElement featuresSequence : currentSequence.features)
                 {
-                    meanPrediction += Features::getInstance().predict(featuresDatabase, featuresSequence);
+                    similarityScore += Features::getInstance().predict(featuresDatabase, featuresSequence);
                 }
             }
-            meanPrediction /= (currentPers.features.size() * currentSequence.features.size());
+            similarityScore /= (currentPers.features.size() * currentSequence.features.size());
 
-            // Check the transition
-            //Transition::getInstance().predict();
+            // Check the transition probability
+            float transitionScore = 0.0;
+            if(transitionsIncluded)
+            {
+                transitionScore = Transition::getInstance().predict(currentSequence.camInfo, currentPers.camInfoList.back());
+            }
 
             // Match. Update database ?
 
-            bool match = meanPrediction > thresholdValueSamePerson;
+            bool match = similarityScore * 1.0 + transitionScore * 1.0 > thresholdValueSamePerson; // TODO: Balance the weigth between
             bool matchError = false; // For debugging
 
             if(match)
             {
-                cout << "Match (" << meanPrediction << ") : " << currentPers.hashId;
+                cout << "Match (" << similarityScore << ") : " << currentPers.hashId;
                 newPers = false;
+
+                currentPers.camInfoList.push_back(currentSequence.camInfo); // We update the informations on the current position
 
                 if(currentMode == ReidMode::TESTING)
                 {
@@ -175,7 +185,7 @@ void ReidManager::computeNext()
             }
             else if(currentMode == ReidMode::TESTING)
             {
-                cout << "Diff (" << meanPrediction << ")";
+                cout << "Diff (" << similarityScore << ")";
 
                 if (currentPers.hashId == hashSeqId) // False negative
                 {
@@ -209,6 +219,7 @@ void ReidManager::computeNext()
             // Add the new person to the database
             database.push_back(PersonElement());
             database.back().features.swap(currentSequence.features); // Can be swapped because the new person has an empty list
+            database.back().camInfoList.push_back(currentSequence.camInfo);
             database.back().name = std::to_string(database.size());
             database.back().hashId = hashSeqId;
 

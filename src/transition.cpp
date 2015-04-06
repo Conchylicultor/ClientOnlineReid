@@ -151,7 +151,7 @@ void Transition::plotTransitions()
     vector<Mat> finalImgs(cameraMap.size()); // All transitions
 
     // Clear the folder before write the new transitions
-    system("exec rm ../../Data/Transitions/*");
+    system("exec rm ../../Data/Debug/Transitions/*");
 
     // Loading background image
     for(pair<int, size_t> currentCam : cameraMap) // For each camera
@@ -245,15 +245,20 @@ void Transition::plotTransitions()
         idTransition++;
     }
 
+    cout << "Received cam:" << endl;
     for(pair<int, size_t> currentCam : cameraMap) // For each camera
     {
+        cout << currentCam.second << endl;
         imshow("Transition: " + std::to_string(currentCam.second), finalImgs.at(currentCam.first));
     }
 }
 
 float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &elem2) const
 {
-    return 0.0;
+    float confidenceCoeff = 0.0;
+
+    cout << "Transition probablity: " << confidenceCoeff << endl;
+    return confidenceCoeff;
 }
 
 void Transition::checkCamera(const CamInfoElement &elem)
