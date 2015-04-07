@@ -14,6 +14,7 @@ Transition &Transition::getInstance()
 Transition::Transition()
 {
     loadCameraMap();
+    loadTransitions();
 }
 
 void Transition::extractArray(const float *array, size_t &offset, CamInfoElement &cameraInfo) const
@@ -257,6 +258,63 @@ float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &ele
 {
     float confidenceCoeff = 0.0;
 
+    // First case: disapearance/reapearance at the same place
+    if(elem1.hashCodeCameraId == elem2.hashCodeCameraId)
+    {
+        float distance = cv::norm(elem1.entranceVectorOrigin - elem2.exitVectorEnd);
+        float duration = std::abs(elem1.beginDate - elem2.endDate);
+        cout << "Distance: " << distance << endl;
+        cout << "Time: " << duration << endl;
+        confidenceCoeff = std::exp(-(distance*1.0 + duration*1.0)); // TODO: Weigth and function
+    }
+    // General case: two different transitions
+    else
+    {
+        TransitionElement newTransition;
+        newTransition.hashCodeCameraIdOut = elem2.hashCodeCameraId; // Exit from the last recorded position of the person
+        newTransition.exitVectorOrigin    = elem2.exitVectorOrigin;
+        newTransition.exitVectorEnd       = elem2.exitVectorEnd;
+        newTransition.hashCodeCameraIdIn   = elem1.hashCodeCameraId; // Entrance from the new sequence
+        newTransition.entranceVectorOrigin = elem1.entranceVectorOrigin;
+        newTransition.entranceVectorEnd    = elem1.entranceVectorEnd;
+        newTransition.transitionDuration = elem1.beginDate - elem2.beginDate;
+
+        // Find the closest transition
+        float minDistance = -1.0;
+        for(TransitionElement currentTransition : listTransitions)
+        {
+            if(newTransition.hashCodeCameraIdIn == currentTransition.hashCodeCameraIdIn &&
+               newTransition.hashCodeCameraIdOut == currentTransition.hashCodeCameraIdOut) // Similar transition (TODO: allow also the reverse transition)
+            {
+                // Compute the distance between the two transitions
+                float currentDistance = 0.0;
+                // TODO: Weigth
+                currentDistance += cv::norm(currentTransition.exitVectorEnd        - newTransition.exitVectorEnd)        * 1.0;
+                currentDistance += cv::norm(currentTransition.entranceVectorOrigin - newTransition.entranceVectorOrigin) * 1.0; // Closest position possible
+                currentDistance += std::abs(currentTransition.transitionDuration   - newTransition.transitionDuration)   * 0.1; // Closest duration possible (less important than proximity)
+
+                if(minDistance < 0.0 || // First match
+                   currentDistance < minDistance) // Otherwise
+                {
+                    minDistance = currentDistance;
+                }
+            }
+        }
+
+        // Found: return the distance between the two
+        // Not found: Use of a default value
+        if(minDistance < 0.0)
+        {
+            cout << "No closest transition" << endl;
+            confidenceCoeff = 0.2; // TODO: Weigth and function
+        }
+        else
+        {
+            cout << "Minimal computed distance: " << minDistance << endl;
+            confidenceCoeff = std::exp(-minDistance); // TODO: Weight and better fuction
+        }
+    }
+
     cout << "Transition probablity: " << confidenceCoeff << endl;
     return confidenceCoeff;
 }
@@ -308,6 +366,11 @@ void Transition::clearCameraMap()
 void Transition::loadCameraMap()
 {
     FileStorage fileTraining("../../Data/Training/cameras.yml", FileStorage::READ);
+    if(!fileTraining.isOpened())
+    {
+        cout << "Error: Cannot open the cameras on the training file (folder does not exist ?)" << endl;
+        return;
+    }
 
     // Load the cameraMap
     cameraMap.clear();
@@ -315,6 +378,39 @@ void Transition::loadCameraMap()
     for(string currentCam : nodeCameraMap)
     {
         cameraMap.insert(pair<int, size_t>(cameraMap.size(), stoull(currentCam)));
+    }
+
+    fileTraining.release();
+}
+
+void Transition::loadTransitions()
+{
+    FileStorage fileTraining("../../Data/Training/calibration.yml", FileStorage::READ);
+    if(!fileTraining.isOpened())
+    {
+        cout << "Error: Cannot open the cameras on the training file (folder does not exist ?)" << endl;
+        return;
+    }
+
+    // Load the recorded transitions
+    listTransitions.clear();
+
+    FileNode nodeTransitions = fileTraining["transitions"];
+    for(FileNodeIterator iter = nodeTransitions.begin() ; iter != nodeTransitions.end() ; iter++)
+    {
+        TransitionElement newTransition;
+        newTransition.hashCodeCameraIdOut = stoull((*iter)["camOut"]);
+        (*iter)["VecOutX1"] >> newTransition.exitVectorOrigin[0];
+        (*iter)["VecOutY1"] >> newTransition.exitVectorOrigin[1];
+        (*iter)["VecOutX2"] >> newTransition.exitVectorEnd[0];
+        (*iter)["VecOutY2"] >> newTransition.exitVectorEnd[1];
+        newTransition.hashCodeCameraIdIn = stoull((*iter)["camIn"]);
+        (*iter)["VecInX1"] >> newTransition.entranceVectorOrigin[0];
+        (*iter)["VecInY1"] >> newTransition.entranceVectorOrigin[1];
+        (*iter)["VecInX2"] >> newTransition.entranceVectorEnd[0];
+        (*iter)["VecInY2"] >> newTransition.entranceVectorEnd[1];
+        (*iter)["dur"] >> newTransition.transitionDuration;
+        listTransitions.push_back(newTransition);
     }
 
     fileTraining.release();

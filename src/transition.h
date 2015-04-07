@@ -56,6 +56,7 @@ private:
     Transition();
 
     void loadCameraMap();
+    void loadTransitions();
 
     std::map<int, size_t> cameraMap;
     vector<TransitionElement> listTransitions;
