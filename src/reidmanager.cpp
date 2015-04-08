@@ -600,8 +600,6 @@ void ReidManager::recordTrainingSet()
     fileTraining << "scaleFactors" << scaleFactors;
 
     fileTraining.release();
-
-    Transition::getInstance().saveCameraMap();
 }
 
 void ReidManager::recordTransitions()
@@ -616,6 +614,8 @@ void ReidManager::recordTransitions()
     }
 
     Transition::getInstance().recordTransitions(listSequencePerson);
+
+    Transition::getInstance().saveCameraMap();
 }
 
 void ReidManager::testingTestingSet()

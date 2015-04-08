@@ -147,28 +147,16 @@ void Transition::recordTransitions(const vector<vector<CamInfoElement> > &listSe
 
 void Transition::plotTransitions()
 {
-    vector<Mat> backgroundImgs(cameraMap.size());
-    vector<Mat> camImgs(cameraMap.size()); // Only one transition
-    vector<Mat> finalImgs(cameraMap.size()); // All transitions
-
     // Clear the folder before write the new transitions
     system("exec rm ../../Data/Debug/Transitions/*");
+
+    vector<Mat> camImgs(cameraMap.size()); // Only one transition
+    vector<Mat> finalImgs(cameraMap.size()); // All transitions
 
     // Loading background image
     for(pair<int, size_t> currentCam : cameraMap) // For each camera
     {
-        backgroundImgs.at(currentCam.first) = imread("../../Data/Models/background_" + std::to_string(currentCam.second) + ".png", CV_LOAD_IMAGE_GRAYSCALE); // No color for better vision
-        if(!backgroundImgs.at(currentCam.first).data)
-        {
-            cout << "Error: no background image for the cam: " << currentCam.second << ", loading default background..." << endl;
-            backgroundImgs.at(currentCam.first) = Mat::zeros(Size(640,480),CV_8UC1);
-        }
-
-        camImgs.  at(currentCam.first).create(backgroundImgs.at(currentCam.first).size(), CV_8UC3);
-
-        finalImgs.at(currentCam.first).create(backgroundImgs.at(currentCam.first).size(), CV_8UC3);
-
-        cv::cvtColor(backgroundImgs.at(currentCam.first), finalImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
+        finalImgs.at(currentCam.first) = backgroundImgs.at(currentCam.first).clone();
     }
 
     int idTransition = 0; // For saving the transition
@@ -190,7 +178,7 @@ void Transition::plotTransitions()
         for(pair<int, size_t> currentCam : cameraMap) // For each camera
         {
             // Clear the background
-            cv::cvtColor(backgroundImgs.at(currentCam.first), camImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
+            camImgs.at(currentCam.first) = backgroundImgs.at(currentCam.first).clone();
 
             // Has an exit
             if(currentTransition.hashCodeCameraIdOut == currentCam.second)
@@ -254,6 +242,66 @@ void Transition::plotTransitions()
     }
 }
 
+Mat Transition::plotTransition(const TransitionElement &elem) const
+{
+    int camInId = -1;
+    int camOutId = -1;
+
+    Size finalSize(0,0);
+    int offsetInX = 0;
+
+    for(pair<int, size_t> currentCam : cameraMap) // For each camera
+    {
+        // Has an exit
+        if(elem.hashCodeCameraIdOut == currentCam.second)
+        {
+            camOutId = currentCam.first;
+            finalSize.width += backgroundImgs.at(camOutId).cols;
+            finalSize.height = std::max(backgroundImgs.at(camOutId).rows, finalSize.height);
+        }
+
+        // Has an entrance
+        if(elem.hashCodeCameraIdIn == currentCam.second)
+        {
+            camInId = currentCam.first;
+            finalSize.width += backgroundImgs.at(camInId).cols;
+            finalSize.height = std::max(backgroundImgs.at(camInId).rows, finalSize.height);
+            offsetInX = backgroundImgs.at(camInId).cols;
+        }
+    }
+
+    Mat finalImgs(finalSize, CV_8UC3);
+
+    Scalar colorExit(0,0,255);
+    Scalar colorEntrance(255,0,0);
+
+    if(camInId != -1)
+    {
+        // Copy the background
+        backgroundImgs.at(camOutId).copyTo(finalImgs(Rect(Point(0,0)        , backgroundImgs.at(camOutId).size())));
+
+        Point pt1(elem.exitVectorOrigin[0], elem.exitVectorOrigin[1]);
+        Point pt2(elem.exitVectorEnd[0],    elem.exitVectorEnd[1]);
+
+        cv::line(finalImgs, pt1, pt2, colorExit, 2);
+        cv::circle(finalImgs, pt2, 5, colorExit);
+
+    }
+    if(camOutId != -1)
+    {
+        // Copy the background
+        backgroundImgs.at(camInId) .copyTo(finalImgs(Rect(Point(offsetInX,0), backgroundImgs.at(camInId).size())));
+
+        Point pt1(elem.entranceVectorOrigin[0] + offsetInX, elem.entranceVectorOrigin[1]);
+        Point pt2(elem.entranceVectorEnd[0]    + offsetInX, elem.entranceVectorEnd[1]);
+
+        cv::line(finalImgs, pt1, pt2, colorEntrance, 2);
+        cv::circle(finalImgs, pt2, 5, colorEntrance);
+    }
+
+    return finalImgs;
+}
+
 float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &elem2) const
 {
     float confidenceCoeff = 0.0;
@@ -306,12 +354,26 @@ float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &ele
         if(minDistance < 0.0)
         {
             cout << "No closest transition" << endl;
-            confidenceCoeff = 0.2; // TODO: Weigth and function
+            confidenceCoeff = 0.0; // TODO: Weigth and function
         }
         else
         {
             cout << "Minimal computed distance: " << minDistance << endl;
             confidenceCoeff = std::exp(-minDistance); // TODO: Weight and better fuction
+
+            // Plot the results transitions
+            static int compteurResultRecord = 0;
+
+            Mat imageNewTransition = plotTransition(newTransition);
+            //Mat imageMinTransition = plotTransition(*minTransition);
+
+            putText(imageNewTransition, "Distance: " + to_string(minDistance), Point(10,20), FONT_HERSHEY_SIMPLEX, 0.4, Scalar(255, 0, 255));
+            // The duration is plot into plotTransition
+
+            imwrite("../../Data/Debug/Result_transitions/" + to_string(compteurResultRecord) + ".png", imageNewTransition);
+            //imwrite("../../Data/Debug/Result_transitions/" + to_string(compteurResultRecord) + "_min.png", imageMinTransition);
+
+            compteurResultRecord++;
         }
     }
 
@@ -365,6 +427,8 @@ void Transition::clearCameraMap()
 
 void Transition::loadCameraMap()
 {
+    // Load the cameras from file
+
     FileStorage fileTraining("../../Data/Training/cameras.yml", FileStorage::READ);
     if(!fileTraining.isOpened())
     {
@@ -381,6 +445,28 @@ void Transition::loadCameraMap()
     }
 
     fileTraining.release();
+
+    // Load the associate background
+
+    system("exec rm ../../Data/Debug/Result_transitions/*");
+
+    backgroundImgs.clear(); // Remove previous background
+    backgroundImgs.resize(cameraMap.size());
+
+    for(pair<int, size_t> currentCam : cameraMap) // For each camera
+    {
+        Mat tempBackground = imread("../../Data/Models/background_" + std::to_string(currentCam.second) + ".png", CV_LOAD_IMAGE_GRAYSCALE); // No color for better vision
+        if(!tempBackground.data)
+        {
+            cout << "Warning: no background image for the cam: " << currentCam.second << ", loading default background..." << endl;
+            backgroundImgs.at(currentCam.first) = Mat::zeros(Size(640,480),CV_8UC3);
+        }
+        else
+        {
+            backgroundImgs.at(currentCam.first).create(tempBackground.size(), CV_8UC3);
+            cvtColor(tempBackground, backgroundImgs.at(currentCam.first), CV_GRAY2RGB); // Now we can plot colors
+        }
+    }
 }
 
 void Transition::loadTransitions()

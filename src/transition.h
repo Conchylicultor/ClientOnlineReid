@@ -55,10 +55,13 @@ public:
 private:
     Transition();
 
+    Mat plotTransition(const TransitionElement &elem) const; // Return the image of the transition elem
+
     void loadCameraMap();
     void loadTransitions();
 
     std::map<int, size_t> cameraMap;
+    vector<Mat> backgroundImgs; // Background associated to the transitions
     vector<TransitionElement> listTransitions;
 };
 
