@@ -287,6 +287,7 @@ Mat Transition::plotTransition(const TransitionElement &elem) const
         cv::circle(finalImgs, pt2, 5, colorExit);
 
     }
+
     if(camOutId != -1)
     {
         // Copy the background
@@ -298,6 +299,8 @@ Mat Transition::plotTransition(const TransitionElement &elem) const
         cv::line(finalImgs, pt1, pt2, colorEntrance, 2);
         cv::circle(finalImgs, pt2, 5, colorEntrance);
     }
+
+    putText(finalImgs, "Duration: " + to_string(elem.transitionDuration), Point(10,10), FONT_HERSHEY_SIMPLEX, 0.4, Scalar(255, 0, 0));
 
     return finalImgs;
 }
@@ -329,7 +332,8 @@ float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &ele
 
         // Find the closest transition
         float minDistance = -1.0;
-        for(TransitionElement currentTransition : listTransitions)
+        const TransitionElement *minTransition = nullptr;
+        for(const TransitionElement &currentTransition : listTransitions)
         {
             if(newTransition.hashCodeCameraIdIn == currentTransition.hashCodeCameraIdIn &&
                newTransition.hashCodeCameraIdOut == currentTransition.hashCodeCameraIdOut) // Similar transition (TODO: allow also the reverse transition)
@@ -345,6 +349,7 @@ float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &ele
                    currentDistance < minDistance) // Otherwise
                 {
                     minDistance = currentDistance;
+                    minTransition = &currentTransition;
                 }
             }
         }
@@ -365,13 +370,13 @@ float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &ele
             static int compteurResultRecord = 0;
 
             Mat imageNewTransition = plotTransition(newTransition);
-            //Mat imageMinTransition = plotTransition(*minTransition);
+            Mat imageMinTransition = plotTransition(*minTransition);
 
             putText(imageNewTransition, "Distance: " + to_string(minDistance), Point(10,20), FONT_HERSHEY_SIMPLEX, 0.4, Scalar(255, 0, 255));
             // The duration is plot into plotTransition
 
             imwrite("../../Data/Debug/Result_transitions/" + to_string(compteurResultRecord) + ".png", imageNewTransition);
-            //imwrite("../../Data/Debug/Result_transitions/" + to_string(compteurResultRecord) + "_min.png", imageMinTransition);
+            imwrite("../../Data/Debug/Result_transitions/" + to_string(compteurResultRecord) + "_min.png", imageMinTransition);
 
             compteurResultRecord++;
         }
