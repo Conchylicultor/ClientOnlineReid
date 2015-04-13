@@ -661,7 +661,7 @@ void ReidManager::recordNetwork()
 
     for(array<float, 3> currentEdge : listEdge)
     {
-        fileNetwork << currentEdge.at(0) << " " << currentEdge.at(1) << " " << currentEdge.at(2) << endl;
+        fileNetwork << currentEdge.at(0)+1 << " " << currentEdge.at(1)+1 << " " << currentEdge.at(2) << endl;
     }
 
     fileNetwork.close();
