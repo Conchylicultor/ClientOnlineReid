@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 #include "features.h"
 #include "transition.h"
@@ -67,6 +68,8 @@ private:
     void recordTrainingSet();
     void recordTransitions();
 
+    void recordNetwork();
+
     void testingTestingSet();
     void trainAndTestSet();
 
@@ -79,6 +82,9 @@ private:
     vector<PersonElement> database;
 
     vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
+
+    // Network
+    vector<array<float,3> > listEdge; // Index of the vertex and weigth
 };
 
 #endif // REIDMANAGER_H

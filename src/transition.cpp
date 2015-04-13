@@ -336,14 +336,15 @@ float Transition::predict(const CamInfoElement &elem1, const CamInfoElement &ele
         for(const TransitionElement &currentTransition : listTransitions)
         {
             if(newTransition.hashCodeCameraIdIn == currentTransition.hashCodeCameraIdIn &&
-               newTransition.hashCodeCameraIdOut == currentTransition.hashCodeCameraIdOut) // Similar transition (TODO: allow also the reverse transition)
+               newTransition.hashCodeCameraIdOut == currentTransition.hashCodeCameraIdOut && // Similar transition (TODO: allow also the reverse transition)
+               std::abs(newTransition.transitionDuration) < 20)
             {
                 // Compute the distance between the two transitions
                 float currentDistance = 0.0;
                 // TODO: Weigth
                 currentDistance += cv::norm(currentTransition.exitVectorEnd        - newTransition.exitVectorEnd)        * 1.0;
                 currentDistance += cv::norm(currentTransition.entranceVectorOrigin - newTransition.entranceVectorOrigin) * 1.0; // Closest position possible
-                currentDistance += std::abs(currentTransition.transitionDuration   - newTransition.transitionDuration)   * 0.1; // Closest duration possible (less important than proximity)
+                currentDistance += std::abs(currentTransition.transitionDuration   - newTransition.transitionDuration)   * 0.2; // Closest duration possible (less important than proximity)
 
                 if(minDistance < 0.0 || // First match
                    currentDistance < minDistance) // Otherwise

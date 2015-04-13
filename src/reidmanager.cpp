@@ -8,6 +8,8 @@
 
 using namespace std;
 
+static const bool sequenceDatasetMode = true; // If true, all sequences will be added to the dataset
+
 static const bool transitionsIncluded = true; // If true, the program will use the network topology information
 static const float thresholdValueSamePerson = 0.21;
 
@@ -33,7 +35,7 @@ ReidManager::ReidManager() :
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin for the evaluation
 
     setDebugMode(true); // Record the result
-    setMode(ReidMode::TESTING); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
+    setMode(ReidMode::RELEASE); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
 }
 
 void ReidManager::computeNext()
@@ -130,8 +132,10 @@ void ReidManager::computeNext()
 
         bool newPers = true; // Not recognize yet
 
-        for(PersonElement currentPers : database)
+        for(size_t currentPersId = 0 ; currentPersId < database.size() ; currentPersId++)
         {
+            PersonElement &currentPers = database.at(currentPersId);
+
             // Check the visual similarity
             float similarityScore = 0.0;
             for(FeaturesElement featuresDatabase : currentPers.features)
@@ -150,69 +154,82 @@ void ReidManager::computeNext()
                 transitionScore = Transition::getInstance().predict(currentSequence.camInfo, currentPers.camInfoList.back());
             }
 
-            // Match. Update database ?
 
-            bool match = similarityScore * 1.0 + transitionScore * 1.0 > thresholdValueSamePerson; // TODO: Balance the weigth between
-            bool matchError = false; // For debugging
-
-            if(match)
+            if(sequenceDatasetMode)
             {
-                cout << "Match (" << similarityScore << ") : " << currentPers.hashId;
-                newPers = false;
-
-                currentPers.camInfoList.push_back(currentSequence.camInfo); // We update the informations on the current position
-
-                if(currentMode == ReidMode::TESTING)
+                if(similarityScore > -0.8) // Record only significant edge
                 {
-                    if(currentPers.hashId != hashSeqId) // False positive
+                    listEdge.push_back({static_cast<float>(currentPersId), // Vertex Id
+                                        static_cast<float>(database.size()), // Vertex Id (will be added just after)
+                                        static_cast<float>(similarityScore + 1.0)}); // Weigth (>0)
+                }
+            }
+            else
+            {
+                // Match. Update database ?
+
+                bool match = similarityScore * 1.0 + transitionScore * 1.0 > thresholdValueSamePerson; // TODO: Balance the weigth between
+                bool matchError = false; // For debugging
+
+                if(match)
+                {
+                    cout << "Match (" << similarityScore << ") : " << currentPers.hashId;
+                    newPers = false;
+
+                    currentPers.camInfoList.push_back(currentSequence.camInfo); // We update the informations on the current position
+
+                    if(currentMode == ReidMode::TESTING)
+                    {
+                        if(currentPers.hashId != hashSeqId) // False positive
+                        {
+                            cout << " <<< ERROR";
+
+                            matchError = true;
+
+                            listEvaluation.back().nbError++;
+                            listEvaluation.back().nbErrorFalsePositiv++;
+                            listEvaluation.back().nbErrorWithoutClone++;
+                        }
+                        else
+                        {
+                            listEvaluation.back().nbCumulativeSuccess++;
+                            isRecognizeOnce = true; // At least once
+                        }
+                    }
+
+                    cout << endl;
+                }
+                else if(currentMode == ReidMode::TESTING)
+                {
+                    cout << "Diff (" << similarityScore << ")";
+
+                    if (currentPers.hashId == hashSeqId) // False negative
                     {
                         cout << " <<< ERROR";
 
                         matchError = true;
 
                         listEvaluation.back().nbError++;
-                        listEvaluation.back().nbErrorFalsePositiv++;
-                        listEvaluation.back().nbErrorWithoutClone++;
+                        listEvaluation.back().nbErrorFalseNegativ++;
+                        nbErrorClone++;
                     }
                     else
                     {
                         listEvaluation.back().nbCumulativeSuccess++;
-                        isRecognizeOnce = true; // At least once
                     }
+                    cout << endl;
                 }
 
-                cout << endl;
-            }
-            else if(currentMode == ReidMode::TESTING)
-            {
-                cout << "Diff (" << similarityScore << ")";
-
-                if (currentPers.hashId == hashSeqId) // False negative
+                // Record the results for checking
+                if(debugMode)
                 {
-                    cout << " <<< ERROR";
-
-                    matchError = true;
-
-                    listEvaluation.back().nbError++;
-                    listEvaluation.back().nbErrorFalseNegativ++;
-                    nbErrorClone++;
+                    plotDebugging(currentSequence, currentPers, match, matchError);
                 }
-                else
-                {
-                    listEvaluation.back().nbCumulativeSuccess++;
-                }
-                cout << endl;
-            }
-
-            // Record the results for checking
-            if(debugMode)
-            {
-                plotDebugging(currentSequence, currentPers, match, matchError);
             }
         }
 
         // No match
-        if(newPers)
+        if(newPers || sequenceDatasetMode) // If we are in sequence mode, we add all sequences
         {
             cout << "No match: Add the new person to the dataset" << endl;
 
@@ -318,6 +335,12 @@ bool ReidManager::eventHandler()
     {
         cout << "Switch debug mode..." << endl;
         setDebugMode(!debugMode);
+        cout << "Done" << endl;
+    }
+    else if(key == 'r' && currentMode == ReidMode::RELEASE)
+    {
+        cout << "Record the network..." << endl;
+        recordNetwork();
         cout << "Done" << endl;
     }
     else if(key == 'q')
@@ -616,6 +639,32 @@ void ReidManager::recordTransitions()
     Transition::getInstance().recordTransitions(listSequencePerson);
 
     Transition::getInstance().saveCameraMap();
+}
+
+void ReidManager::recordNetwork()
+{
+    ofstream fileNetwork("../../Data/Debug/network.net");
+    if(!fileNetwork.is_open())
+    {
+        cout << "Error: cannot open the network file" << endl;
+        return;
+    }
+
+    fileNetwork << "*Vertices " << database.size() << endl;
+
+    for(size_t i = 0 ; i < database.size() ; ++i)
+    {
+        fileNetwork << i+1 << " \"" << database.at(i).hashId << "\"" << endl;
+    }
+
+    fileNetwork << "*Edges" << endl;
+
+    for(array<float, 3> currentEdge : listEdge)
+    {
+        fileNetwork << currentEdge.at(0) << " " << currentEdge.at(1) << " " << currentEdge.at(2) << endl;
+    }
+
+    fileNetwork.close();
 }
 
 void ReidManager::testingTestingSet()
