@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 #include <map>
 #include "opencv2/opencv.hpp"
 
