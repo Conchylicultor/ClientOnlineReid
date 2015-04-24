@@ -654,7 +654,19 @@ void ReidManager::recordNetwork()
 
     for(size_t i = 0 ; i < database.size() ; ++i)
     {
-        fileNetwork << i+1 << " \"" << database.at(i).hashId << "\"" << endl;
+        string fileId = to_string(database.at(i).features.front().clientId) + "_"
+                      + to_string(database.at(i).features.front().silhouetteId) + "_"
+                      + to_string(database.at(i).features.front().imageId);
+
+        fileNetwork << i+1 << " \"";
+
+        fileNetwork << " seq:" << fileId;
+        if(currentMode == ReidMode::TESTING)
+        {
+            fileNetwork << " pers:" << database.at(i).hashId;
+        }
+
+        fileNetwork  << "\"" << endl;
     }
 
     fileNetwork << "*Edges" << endl;
