@@ -661,6 +661,10 @@ void ReidManager::recordNetwork()
         fileNetwork << i+1 << " \"";
 
         fileNetwork << " seq:" << fileId;
+        if(transitionsIncluded)
+        {
+            fileNetwork << " date:" << database.at(i).camInfoList.front().beginDate;
+        }
         if(currentMode == ReidMode::TESTING)
         {
             fileNetwork << " pers:" << database.at(i).hashId;
