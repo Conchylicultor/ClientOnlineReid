@@ -7,6 +7,7 @@
 #include <list>
 
 using namespace std;
+using namespace cv;
 
 static const bool sequenceDatasetMode = true; // If true, all sequences will be added to the dataset
 

@@ -1,5 +1,8 @@
 #include "transition.h"
 
+using namespace std;
+using namespace cv;
+
 size_t reconstructHashcode(const float *array); // TODO: Better inclusion
 
 static const int transitionDurationMin = -10;

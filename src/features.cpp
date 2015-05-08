@@ -2,6 +2,9 @@
 
 #include <fstream>
 
+using namespace std;
+using namespace cv;
+
 // Variables for features computation
 const int HIST_SIZE = 100;
 

@@ -6,6 +6,7 @@
 #include "opencv2/opencv.hpp"
 
 using namespace std;
+
 #define CLIENTID    "ReidClient"
 
 const string protocolVersionTopic = "reid_client/protocol_version";

@@ -9,22 +9,20 @@
 #include "features.h"
 #include "transition.h"
 
-using namespace std;
-
 
 enum class ReidMode {RELEASE, TRAINING, TESTING};
 
 struct SequenceElement
 {
-    vector<FeaturesElement> features;
+    std::vector<FeaturesElement> features;
     CamInfoElement camInfo;
 };
 
 struct PersonElement
 {
-    vector<FeaturesElement> features; // TODO: Replace those lines by vector<SequenceElement>
-    vector<CamInfoElement> camInfoList;
-    string name;
+    std::vector<FeaturesElement> features; // TODO: Replace those lines by vector<SequenceElement>
+    std::vector<CamInfoElement> camInfoList;
+    std::string name;
     size_t hashId;
 };
 
@@ -56,13 +54,13 @@ public:
     bool eventHandler();
 
 private:
-    string getNextSeqString() const;
-    float *reconstructArray(const string &seqId, size_t &sizeOut) const;
+    std::string getNextSeqString() const;
+    float *reconstructArray(const std::string &seqId, size_t &sizeOut) const;
 
     void setMode(const ReidMode &newMode);
     void setDebugMode(bool newMode);
 
-    void selectPairs(Mat &dataSet, Mat &classesSet);
+    void selectPairs(cv::Mat &dataSet, cv::Mat &classesSet);
 
     void recordReceivedData(); // Just encapsulate the two following functions (recordTrainingSet and recordTransition)
     void recordTrainingSet();
@@ -79,12 +77,12 @@ private:
     ReidMode currentMode;
     bool calibrationActive;
     bool debugMode; // Save the images for checking the recognition
-    vector<PersonElement> database;
+    std::vector<PersonElement> database;
 
-    vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
+    std::vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
 
     // Network
-    vector<array<float,3> > listEdge; // Index of the vertex and weigth
+    std::vector<std::array<float,3> > listEdge; // Index of the vertex and weigth
 };
 
 #endif // REIDMANAGER_H

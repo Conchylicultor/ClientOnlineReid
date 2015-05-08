@@ -4,9 +4,6 @@
 #include <vector>
 #include "opencv2/opencv.hpp"
 
-using namespace std;
-using namespace cv;
-
 struct TransitionElement
 {
     // Information on the first stage of the transition (leave the camera)
@@ -45,7 +42,7 @@ public:
                       size_t &offset, // Modify the offset value
                       CamInfoElement &cameraInfo) const;
 
-    void recordTransitions(const vector<vector<CamInfoElement> > &listSequencePerson);
+    void recordTransitions(const std::vector<std::vector<CamInfoElement> > &listSequencePerson);
     void plotTransitions();
 
     void checkCamera(const CamInfoElement &elem); // Add a camera eventually to the list
@@ -55,14 +52,14 @@ public:
 private:
     Transition();
 
-    Mat plotTransition(const TransitionElement &elem) const; // Return the image of the transition elem
+    cv::Mat plotTransition(const TransitionElement &elem) const; // Return the image of the transition elem
 
     void loadCameraMap();
     void loadTransitions();
 
     std::map<int, size_t> cameraMap;
-    vector<Mat> backgroundImgs; // Background associated to the transitions
-    vector<TransitionElement> listTransitions;
+    std::vector<cv::Mat> backgroundImgs; // Background associated to the transitions
+    std::vector<TransitionElement> listTransitions;
 };
 
 #endif // TRANSITION_H

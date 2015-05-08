@@ -8,9 +8,6 @@
 #include <map>
 #include "opencv2/opencv.hpp"
 
-using namespace std;
-using namespace cv;
-
 // Independent features
 
 // Keep has to be lower or equal to extract
@@ -19,7 +16,7 @@ using namespace cv;
 
 struct MajorColorElem
 {
-    Vec3b color;
+    cv::Vec3b color;
     float position;
     int weightColor; // Nb of element of this color
 };
@@ -29,8 +26,8 @@ struct MajorColorElem
 struct FeaturesElement
 {
     // Frame attributes
-    array<Mat, 3> histogramChannels;
-    array<MajorColorElem, NB_MAJOR_COLORS_EXTRACT> majorColors;
+    std::array<cv::Mat, 3> histogramChannels;
+    std::array<MajorColorElem, NB_MAJOR_COLORS_EXTRACT> majorColors;
 
     // Image id information
     int clientId;
@@ -46,14 +43,14 @@ public:
     static Features &getInstance();
 
     float predict(const FeaturesElement &elem1, const FeaturesElement &elem2) const;
-    float predictRow(Mat rowFeatureVector) const; // The feature vector will be scaled
-    void scaleRow(Mat rowFeatureVector) const;
-    void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, Mat &rowFeatureVector) const;
+    float predictRow(cv::Mat rowFeatureVector) const; // The feature vector will be scaled
+    void scaleRow(cv::Mat rowFeatureVector) const;
+    void computeDistance(const FeaturesElement &elem1, const FeaturesElement &elem2, cv::Mat &rowFeatureVector) const;
     void extractArray(const float *array,
                       size_t sizeArray,
-                      vector<FeaturesElement> &listFeatures) const;
+                      std::vector<FeaturesElement> &listFeatures) const;
 
-    void setScaleFactors(const Mat &newValue);
+    void setScaleFactors(const cv::Mat &newValue);
 
     void loadMachineLearning();
 
@@ -64,7 +61,7 @@ private:
 
     CvSVM svm;
 
-    Mat scaleFactors;
+    cv::Mat scaleFactors;
 };
 
 #endif // FEATURES_H
