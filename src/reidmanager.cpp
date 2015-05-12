@@ -338,7 +338,7 @@ bool ReidManager::eventHandler()
         setDebugMode(!debugMode);
         cout << "Done" << endl;
     }
-    else if(key == 'r' && currentMode == ReidMode::RELEASE)
+    else if(key == 'n' && currentMode == ReidMode::RELEASE)
     {
         cout << "Record the network..." << endl;
         recordNetwork();
@@ -656,8 +656,7 @@ void ReidManager::recordNetwork()
     for(size_t i = 0 ; i < database.size() ; ++i)
     {
         string fileId = to_string(database.at(i).features.front().clientId) + "_"
-                      + to_string(database.at(i).features.front().silhouetteId) + "_"
-                      + to_string(database.at(i).features.front().imageId);
+                      + to_string(database.at(i).features.front().silhouetteId);
 
         fileNetwork << i+1 << " \"";
 
