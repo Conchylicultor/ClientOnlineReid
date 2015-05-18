@@ -35,7 +35,7 @@ ReidManager::ReidManager() :
 
     listEvaluation.push_back(EvaluationElement{0,0,0,0,0,0,0,0,0}); // Origin for the evaluation
 
-    setDebugMode(true); // Record the result
+    setDebugMode(false); // Record the result
     setMode(ReidMode::RELEASE); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
 }
 
@@ -78,8 +78,16 @@ void ReidManager::computeNext()
         {
             if(currentPers.hashId == hashSeqId || calibrationActive) // If calibration mode is activated, we concider there is just one person into the camera
             {
-                currentPers.features.insert(currentPers.features.end(), currentSequence.features.begin(), currentSequence.features.end());
-                currentPers.camInfoList.push_back(currentSequence.camInfo);
+                currentPers.sequenceList.push_back(SequenceElement());
+                //currentPers.sequenceList.back().features.assign(currentSequence.features.begin(), currentSequence.features.end());
+                currentPers.sequenceList.back().camInfo = currentSequence.camInfo;
+
+                // We insert instead of pushing back, so we would have only one list of FeaturesElement (more easy to select the traning sample)
+                currentPers.sequenceList.front().features.insert(
+                    currentPers.sequenceList.front().features.begin(),
+                    currentSequence.features.begin(),
+                    currentSequence.features.end());
+
                 newPers = false;
                 break; // We only add the person once !
             }
@@ -90,8 +98,11 @@ void ReidManager::computeNext()
         {
             // Add the new person to the database
             database.push_back(PersonElement());
-            database.back().features.swap(currentSequence.features); // Can be done because a new person has an empty list
-            database.back().camInfoList.push_back(currentSequence.camInfo);
+
+            database.back().sequenceList.push_back(SequenceElement());
+            database.back().sequenceList.back().features.swap(currentSequence.features);
+            database.back().sequenceList.back().camInfo = currentSequence.camInfo;
+
             database.back().name = std::to_string(hashSeqId);
             database.back().hashId = hashSeqId;
         }
@@ -139,20 +150,25 @@ void ReidManager::computeNext()
 
             // Check the visual similarity
             float similarityScore = 0.0;
-            for(FeaturesElement featuresDatabase : currentPers.features)
+            size_t nbFeaturesDatabase = 0;
+            for(const SequenceElement &sequenceDatabase : currentPers.sequenceList) // Comparaison of each sequence
             {
-                for(FeaturesElement featuresSequence : currentSequence.features)
+                for(const FeaturesElement &featuresDatabase : sequenceDatabase.features)
                 {
-                    similarityScore += Features::getInstance().predict(featuresDatabase, featuresSequence);
+                    for(const FeaturesElement &featuresSequence : currentSequence.features)
+                    {
+                        similarityScore += Features::getInstance().predict(featuresDatabase, featuresSequence); // TODO: Instead of averaging all score, maybe it's better to have one different score for each sequence
+                    }
+                    nbFeaturesDatabase++;
                 }
             }
-            similarityScore /= (currentPers.features.size() * currentSequence.features.size());
+            similarityScore /= (nbFeaturesDatabase * currentSequence.features.size());
 
             // Check the transition probability
             float transitionScore = 0.0;
             if(transitionsIncluded)
             {
-                transitionScore = Transition::getInstance().predict(currentSequence.camInfo, currentPers.camInfoList.back());
+                transitionScore = Transition::getInstance().predict(currentSequence.camInfo, currentPers.sequenceList.back().camInfo);
             }
 
 
@@ -177,7 +193,10 @@ void ReidManager::computeNext()
                     cout << "Match (" << similarityScore << ") : " << currentPers.hashId;
                     newPers = false;
 
-                    currentPers.camInfoList.push_back(currentSequence.camInfo); // We update the informations on the current position
+                    // We update the informations on the current sequence
+                    currentPers.sequenceList.push_back(SequenceElement());
+                    // currentPers.sequenceList.back().features = currentSequence.features; // TODO: check that the copy is correct
+                    currentPers.sequenceList.back().camInfo = currentSequence.camInfo;
 
                     if(currentMode == ReidMode::TESTING)
                     {
@@ -236,8 +255,11 @@ void ReidManager::computeNext()
 
             // Add the new person to the database
             database.push_back(PersonElement());
-            database.back().features.swap(currentSequence.features); // Can be swapped because the new person has an empty list
-            database.back().camInfoList.push_back(currentSequence.camInfo);
+
+            database.back().sequenceList.push_back(SequenceElement());
+            database.back().sequenceList.back().features.swap(currentSequence.features); // Can be swapped because the new person has an empty list
+            database.back().sequenceList.back().camInfo = currentSequence.camInfo;
+
             database.back().name = std::to_string(database.size());
             database.back().hashId = hashSeqId;
 
@@ -479,13 +501,14 @@ void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
     unsigned int idPers1 = 0;
     for(PersonElement currentPerson : database)
     {
-        unsigned int nbSample = currentPerson.features.size() * 2; // Arbitrary number
+        unsigned int nbFeatures = currentPerson.sequenceList.front().features.size();
+        unsigned int nbSample = nbFeatures * 2; // Arbitrary number
 
         // Positive samples
         for(unsigned int i = 0 ; i < nbSample ; ++i)
         {
-            unsigned int value1 = std::rand() % currentPerson.features.size();
-            unsigned int value2 = std::rand() % currentPerson.features.size();
+            unsigned int value1 = std::rand() % nbFeatures;
+            unsigned int value2 = std::rand() % nbFeatures;
 
             if(value1 == value2)
             {
@@ -513,8 +536,8 @@ void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
             }
             else
             {
-                unsigned int value1 = std::rand() % currentPerson.features.size();
-                unsigned int value2 = std::rand() % database.at(idPers2).features.size();
+                unsigned int value1 = std::rand() % nbFeatures;
+                unsigned int value2 = std::rand() % database.at(idPers2).sequenceList.front().features.size();
 
                 listDataSet.push_back(ElemTraining());
                 listDataSet.back().idPers1 = idPers1;
@@ -534,8 +557,8 @@ void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
     for(ElemTraining currentSetElem : listDataSet)
     {
         Mat rowFeatureVector;
-        Features::getInstance().computeDistance(database.at(currentSetElem.idPers1).features.at(currentSetElem.valuePers1),
-                                                database.at(currentSetElem.idPers2).features.at(currentSetElem.valuePers2),
+        Features::getInstance().computeDistance(database.at(currentSetElem.idPers1).sequenceList.front().features.at(currentSetElem.valuePers1),
+                                                database.at(currentSetElem.idPers2).sequenceList.front().features.at(currentSetElem.valuePers2),
                                                 rowFeatureVector); // No scaling yet (wait that all data are received)
 
         Mat rowClass = cv::Mat::ones(1, 1, CV_32FC1);
@@ -634,7 +657,11 @@ void ReidManager::recordTransitions()
 
     for(const PersonElement &currentPerson : database)
     {
-        listSequencePerson.push_back(currentPerson.camInfoList);
+        listSequencePerson.push_back(vector<CamInfoElement>());
+        for(const SequenceElement &currentSequence : currentPerson.sequenceList)
+        {
+            listSequencePerson.back().push_back(currentSequence.camInfo);
+        }
     }
 
     Transition::getInstance().recordTransitions(listSequencePerson);
@@ -655,15 +682,17 @@ void ReidManager::recordNetwork()
 
     for(size_t i = 0 ; i < database.size() ; ++i)
     {
-        string fileId = to_string(database.at(i).features.front().clientId) + "_"
-                      + to_string(database.at(i).features.front().silhouetteId);
+        const SequenceElement &frontSequence = database.at(i).sequenceList.front(); // Each person only contain one sequence
+
+        string fileId = to_string(frontSequence.features.front().clientId) + "_"
+                      + to_string(frontSequence.features.front().silhouetteId);
 
         fileNetwork << i+1 << " \"";
 
         fileNetwork << " seq:" << fileId;
         if(transitionsIncluded)
         {
-            fileNetwork << " date:" << database.at(i).camInfoList.front().beginDate;
+            fileNetwork << " date:" << frontSequence.camInfo.beginDate;
         }
         if(currentMode == ReidMode::TESTING)
         {
@@ -833,7 +862,7 @@ void ReidManager::plotEvaluation()
     imshow("Evaluation Results", imgEval);
 }
 
-void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, bool same, bool error)
+void ReidManager::plotDebugging(const SequenceElement &sequence, const PersonElement &person, bool same, bool error)
 {
     // Don't save if there is no error
     if(currentMode == ReidMode::TESTING && !error)
@@ -863,9 +892,11 @@ void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, 
 
     // Extract the sub images
 
+    const SequenceElement &sequencePerson = person.sequenceList.front();
+
     vector<vector<Mat> > imageRows;
     imageRows.push_back(vector<Mat>(sequence.features.size()*2));
-    imageRows.push_back(vector<Mat>(person.features.size()*2));
+    imageRows.push_back(vector<Mat>(sequencePerson.features.size()*2));
 
     size_t i = 0;
     size_t j = 0;
@@ -873,7 +904,7 @@ void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, 
     int debugImgSize [2][2] = {0}; // [row][width, height]
 
     bool secondRow = false;
-    for(size_t compteurTot = 0 ; compteurTot < sequence.features.size() + person.features.size() ; ++compteurTot)
+    for(size_t compteurTot = 0 ; compteurTot < sequence.features.size() + sequencePerson.features.size() ; ++compteurTot)
     {
         // Check if second row
         if(j == 0 && compteurTot == sequence.features.size())
@@ -892,7 +923,7 @@ void ReidManager::plotDebugging(SequenceElement sequence, PersonElement person, 
         }
         else
         {
-            currentFeatureElem = &person.features.at(i);
+            currentFeatureElem = &sequencePerson.features.at(i);
         }
 
         string filenameImage = "../../Data/Traces/"

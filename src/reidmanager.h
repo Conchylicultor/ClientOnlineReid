@@ -20,8 +20,7 @@ struct SequenceElement
 
 struct PersonElement
 {
-    std::vector<FeaturesElement> features; // TODO: Replace those lines by vector<SequenceElement>
-    std::vector<CamInfoElement> camInfoList;
+    std::vector<SequenceElement> sequenceList;
     std::string name;
     size_t hashId;
 };
@@ -72,7 +71,7 @@ private:
     void trainAndTestSet();
 
     void plotEvaluation();
-    void plotDebugging(SequenceElement sequence, PersonElement person, bool same, bool error=false); // Save the results on disk
+    void plotDebugging(const SequenceElement &sequence, const PersonElement &person, bool same, bool error=false); // Save the results on disk
 
     ReidMode currentMode;
     bool calibrationActive;
