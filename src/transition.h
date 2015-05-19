@@ -42,7 +42,7 @@ public:
                       size_t &offset, // Modify the offset value
                       CamInfoElement &cameraInfo) const;
 
-    void recordTransitions(const std::vector<std::vector<CamInfoElement> > &listSequencePerson);
+    void recordTransitions(const std::vector<std::vector<CamInfoElement>> &listSequencePerson);
     void plotTransitions();
 
     void checkCamera(const CamInfoElement &elem); // Add a camera eventually to the list

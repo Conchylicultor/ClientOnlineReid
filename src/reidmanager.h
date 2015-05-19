@@ -81,7 +81,7 @@ private:
     std::vector<EvaluationElement> listEvaluation;// Evaluation which contain the datas to plot
 
     // Network
-    std::vector<std::array<float,3> > listEdge; // Index of the vertex and weigth
+    std::vector<std::array<float,3>> listEdge; // Index of the vertex and weigth
 };
 
 #endif // REIDMANAGER_H

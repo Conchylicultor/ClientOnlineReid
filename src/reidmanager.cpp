@@ -653,7 +653,7 @@ void ReidManager::recordTransitions()
 {
     cout << "Record transitions" << endl;
 
-    vector<vector<CamInfoElement> > listSequencePerson;
+    vector<vector<CamInfoElement>> listSequencePerson;
 
     for(const PersonElement &currentPerson : database)
     {
@@ -894,7 +894,7 @@ void ReidManager::plotDebugging(const SequenceElement &sequence, const PersonEle
 
     const SequenceElement &sequencePerson = person.sequenceList.front();
 
-    vector<vector<Mat> > imageRows;
+    vector<vector<Mat>> imageRows;
     imageRows.push_back(vector<Mat>(sequence.features.size()*2));
     imageRows.push_back(vector<Mat>(sequencePerson.features.size()*2));
 

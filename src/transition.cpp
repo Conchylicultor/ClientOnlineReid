@@ -42,7 +42,7 @@ void Transition::extractArray(const float *array, size_t &offset, CamInfoElement
     offset += 12; // New offset value
 }
 
-void Transition::recordTransitions(const vector<vector<CamInfoElement> > &listSequencePerson)
+void Transition::recordTransitions(const vector<vector<CamInfoElement>> &listSequencePerson)
 {
     listTransitions.clear(); // We don't want use previous transitions
 
