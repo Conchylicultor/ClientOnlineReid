@@ -11,7 +11,7 @@ using namespace cv;
 
 static const bool sequenceDatasetMode = true; // If true, all sequences will be added to the dataset
 
-static const bool transitionsIncluded = true; // If true, the program will use the network topology information
+static const bool transitionsIncluded = false; // If true, the program will use the network topology information
 static const float thresholdValueSamePerson = 0.21;
 
 struct ElemTraining
@@ -671,10 +671,10 @@ void ReidManager::recordTransitions()
 
 void ReidManager::recordNetwork()
 {
-    ofstream fileNetwork("../../Data/Debug/network.net");
+    ofstream fileNetwork("../../Data/OutputReid/network.net");
     if(!fileNetwork.is_open())
     {
-        cout << "Error: cannot open the network file" << endl;
+        cout << "Error: cannot open the network file (Is the working directory correct or the directory \"OutputReid/\" created ?)" << endl;
         return;
     }
 
