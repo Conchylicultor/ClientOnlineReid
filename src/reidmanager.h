@@ -59,6 +59,8 @@ private:
     void setMode(const ReidMode &newMode);
     void setDebugMode(bool newMode);
 
+    void updateGui();
+
     void selectPairs(cv::Mat &dataSet, cv::Mat &classesSet);
 
     void recordReceivedData(); // Just encapsulate the two following functions (recordTrainingSet and recordTransition)

@@ -28,7 +28,7 @@ ReidManager::ReidManager() :
     calibrationActive(false)
 {
     std::srand ( unsigned ( std::time(0) ) );
-    namedWindow("MainWindow", WINDOW_NORMAL);
+    namedWindow("MainWindow", WINDOW_AUTOSIZE);
 
     Features::getInstance(); // Initialize the features (train the svm,...)
     Transition::getInstance(); // Same for the transitions (camera list,...)
@@ -37,6 +37,7 @@ ReidManager::ReidManager() :
 
     setDebugMode(false); // Record the result
     setMode(ReidMode::RELEASE); // Default mode (call after initialized that loadMachineLearning has been set in case of TRAINING)
+    updateGui();
 }
 
 void ReidManager::computeNext()
@@ -371,6 +372,12 @@ bool ReidManager::eventHandler()
         cout << "Exit..." << endl;
         return true;
     }
+
+    if(key != -1)
+    {
+        updateGui();
+    }
+
     return false;
 }
 
@@ -492,6 +499,93 @@ void ReidManager::setDebugMode(bool newMode)
     {
         cout << "Debug mode desactivated!" << endl;
     }
+}
+
+void ReidManager::updateGui()
+{
+    Mat monitorScreen = Mat::zeros(480, 640, CV_8UC3);
+
+    String mainText;
+    String secondaryText;
+    String instructionLine1Text;
+    String instructionLine2Text;
+
+    Point positionText(15, 30);
+    Scalar color(255, 255, 255);
+
+    putText(monitorScreen, "----- Re-identification -----", positionText, FONT_HERSHEY_SIMPLEX, 0.6, color);
+    positionText.y += 30;
+
+    putText(monitorScreen, "Controls: Exit (q), Switch mode (s),...", positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 30;
+
+    switch (currentMode) {
+    case ReidMode::TRAINING:
+        mainText = "Training (no recognition, used to train the svm as binary classifier)";
+
+        if(calibrationActive)
+        {
+            secondaryText = "Calibration active (all incoming sequences are considered as the same person)";
+        }
+        else
+        {
+            secondaryText = "Calibration mode disable";
+        }
+
+        instructionLine1Text = "Create training set (t), test with incoming sequences (g) or do both (b)";
+        instructionLine2Text = "Switch calibration (a) or not, then record (c) or plot (p) the transitions";
+        break;
+    case ReidMode::TESTING:
+        mainText = "Testing (all incoming sequences have to be labelized)";
+
+        instructionLine1Text = "Plot the evaluation (e)";
+
+        break;
+    case ReidMode::RELEASE:
+        mainText = "Release (no labelized sequences)";
+
+        break;
+    default:
+        break;
+    }
+
+    if(currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE)
+    {
+        if(sequenceDatasetMode)
+        {
+            secondaryText += "Graph mode on (each incoming sequence is recorded as new person)";
+        }
+        else
+        {
+            secondaryText = "Graph mode off";
+        }
+
+        if(debugMode)
+        {
+            secondaryText += ", Debug mode on";
+        }
+        else
+        {
+            secondaryText += ", Debug mode off";
+        }
+
+        instructionLine2Text = "Save the recognition graph (n) ; Switch to debug mode (d) (save all images)";
+    }
+
+    putText(monitorScreen, "Mode: " + mainText, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 15;
+    putText(monitorScreen, "Mode option: " + secondaryText, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 30;
+
+    putText(monitorScreen, "Instructions:", positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 15;
+    putText(monitorScreen, instructionLine1Text, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 15;
+    putText(monitorScreen, instructionLine2Text, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 15;
+
+    imshow("MainWindow", monitorScreen);
+    waitKey(1); // update immediately
 }
 
 void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
