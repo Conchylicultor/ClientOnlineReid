@@ -176,8 +176,8 @@ void ReidManager::computeNext()
             {
                 if(similarityScore > -0.8) // Record only significant edge
                 {
-                    listEdge.push_back({static_cast<float>(currentPersId), // Vertex Id
-                                        static_cast<float>(database.size()), // Vertex Id (will be added just after)
+                    listEdge.push_back({static_cast<float>(currentPersId + 1), // Vertex Id (Ids start at 1)
+                                        static_cast<float>(database.size() + 1), // Vertex Id (will be added just after)
                                         static_cast<float>(similarityScore + 1.0)}); // Weigth (>0)
                 }
             }
@@ -678,13 +678,25 @@ void ReidManager::recordNetwork()
         return;
     }
 
-    fileNetwork << "*Vertices " << database.size() << endl;
-
-    for(size_t i = 0 ; i < database.size() ; ++i)
+    int indexVertex = 0;
+    for(const PersonElement &person : database)
     {
-        for(const SequenceElement &sequence : database.at(i).sequenceList) // Each person only contain one sequence if sequenceDatasetMode is active
+        for(size_t j = 0 ; j < person.sequenceList.size() ; ++j)
         {
-            fileNetwork << i+1 << " \"";
+            indexVertex++; // Count the number of vertex
+        }
+    }
+
+    fileNetwork << "*Vertices " << indexVertex << endl;
+
+    indexVertex = 1;
+    for(const PersonElement &person : database)
+    {
+        for(size_t j = 0 ; j < person.sequenceList.size() ; ++j)// Each person only contain one sequence if sequenceDatasetMode is active
+        {
+            const SequenceElement &sequence = person.sequenceList.at(j);
+
+            fileNetwork << indexVertex << " \"";
 
             // Sequence id
             string fileId = to_string(sequence.features.front().clientId) + "_"
@@ -700,10 +712,23 @@ void ReidManager::recordNetwork()
             // The person id
             if(currentMode == ReidMode::TESTING || !sequenceDatasetMode)
             {
-                fileNetwork << " pers:" << database.at(i).hashId;
+                fileNetwork << " pers:" << person.hashId;
+                if(j != 0)
+                {
+                    listEdge.push_back({static_cast<float>(indexVertex-1), // Previous vertex Id
+                                        static_cast<float>(indexVertex), // Current vertex Id
+                                        1.0});
+                }
+                else if(person.sequenceList.size() > 1) // Connect the last sequence to the first
+                {
+                    listEdge.push_back({static_cast<float>(indexVertex), // Current vertex Id
+                                        static_cast<float>(indexVertex + person.sequenceList.size() - 1), // Last vertex Id
+                                        1.0});
+                }
             }
 
             fileNetwork  << "\"" << endl;
+            indexVertex++;
         }
     }
 
@@ -711,7 +736,7 @@ void ReidManager::recordNetwork()
 
     for(array<float, 3> currentEdge : listEdge)
     {
-        fileNetwork << currentEdge.at(0)+1 << " " << currentEdge.at(1)+1 << " " << currentEdge.at(2) << endl;
+        fileNetwork << currentEdge.at(0) << " " << currentEdge.at(1) << " " << currentEdge.at(2) << endl;
     }
 
     fileNetwork.close();
