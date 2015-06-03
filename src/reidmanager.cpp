@@ -9,7 +9,7 @@
 using namespace std;
 using namespace cv;
 
-static const bool sequenceDatasetMode = true; // If true, all sequences will be added to the dataset
+static const bool sequenceDatasetMode = false; // If true, all sequences will be added to the dataset as individual person
 
 static const bool transitionsIncluded = false; // If true, the program will use the network topology information
 static const float thresholdValueSamePerson = 0.21;
@@ -195,7 +195,7 @@ void ReidManager::computeNext()
 
                     // We update the informations on the current sequence
                     currentPers.sequenceList.push_back(SequenceElement());
-                    // currentPers.sequenceList.back().features = currentSequence.features; // TODO: check that the copy is correct
+                    currentPers.sequenceList.back().features = currentSequence.features;
                     currentPers.sequenceList.back().camInfo = currentSequence.camInfo;
 
                     if(currentMode == ReidMode::TESTING)
@@ -682,24 +682,29 @@ void ReidManager::recordNetwork()
 
     for(size_t i = 0 ; i < database.size() ; ++i)
     {
-        const SequenceElement &frontSequence = database.at(i).sequenceList.front(); // Each person only contain one sequence
-
-        string fileId = to_string(frontSequence.features.front().clientId) + "_"
-                      + to_string(frontSequence.features.front().silhouetteId);
-
-        fileNetwork << i+1 << " \"";
-
-        fileNetwork << " seq:" << fileId;
-        if(transitionsIncluded)
+        for(const SequenceElement &sequence : database.at(i).sequenceList) // Each person only contain one sequence if sequenceDatasetMode is active
         {
-            fileNetwork << " date:" << frontSequence.camInfo.beginDate;
-        }
-        if(currentMode == ReidMode::TESTING)
-        {
-            fileNetwork << " pers:" << database.at(i).hashId;
-        }
+            fileNetwork << i+1 << " \"";
 
-        fileNetwork  << "\"" << endl;
+            // Sequence id
+            string fileId = to_string(sequence.features.front().clientId) + "_"
+                          + to_string(sequence.features.front().silhouetteId);
+            fileNetwork << " seq:" << fileId;
+
+            // The date (for the filters)
+            if(transitionsIncluded)
+            {
+                fileNetwork << " date:" << sequence.camInfo.beginDate;
+            }
+
+            // The person id
+            if(currentMode == ReidMode::TESTING || !sequenceDatasetMode)
+            {
+                fileNetwork << " pers:" << database.at(i).hashId;
+            }
+
+            fileNetwork  << "\"" << endl;
+        }
     }
 
     fileNetwork << "*Edges" << endl;
