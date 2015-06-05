@@ -1011,6 +1011,11 @@ void ReidManager::plotEvaluation()
         putText(imgEval, "Clones", Point(10, posLegend), FONT_HERSHEY_SIMPLEX, 0.4, color);
         line(imgEval, pt1, pt2, color);
         posLegend += 10;*/
+
+        if(evalElemNext.nbCumulativeSuccess + evalElemNext.nbError > 0) // The first two elements are null
+        {
+            cout << "Success at " << i << ":" << evalElemNext.nbCumulativeSuccess * 100 / (evalElemNext.nbCumulativeSuccess + evalElemNext.nbError) << "%" << endl;
+        }
     }
 
     // Display
