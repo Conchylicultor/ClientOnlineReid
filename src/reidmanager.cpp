@@ -853,7 +853,7 @@ void ReidManager::recordNetwork()
                 }
             }
 
-            fileNetwork  << "\"" << endl;
+            fileNetwork  << " \"" << endl;
             indexVertex++;
         }
     }
