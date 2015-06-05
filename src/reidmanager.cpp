@@ -10,6 +10,7 @@ using namespace std;
 using namespace cv;
 
 static const bool sequenceDatasetMode = false; // If true, all sequences will be added to the dataset as individual person
+static const bool singleReidMode = true; // If true, when reid, the new sequence is only added to the most similar person (instead of all matches)
 
 static const bool transitionsIncluded = false; // If true, the program will use the network topology information
 static const float thresholdValueSamePerson = 0.21;
@@ -144,6 +145,8 @@ void ReidManager::computeNext()
         // Match with the dataset
 
         bool newPers = true; // Not recognize yet
+        PersonElement *mostSimilarPerson = nullptr;
+        int mostSimilarPersonScore = 0;
 
         for(size_t currentPersId = 0 ; currentPersId < database.size() ; currentPersId++)
         {
@@ -173,7 +176,7 @@ void ReidManager::computeNext()
             }
 
 
-            if(sequenceDatasetMode)
+            if(sequenceDatasetMode) // In sequence dataset mode, we add all all sequences as new person and we compute only the edge
             {
                 if(similarityScore > -0.8) // Record only significant edge
                 {
@@ -182,7 +185,7 @@ void ReidManager::computeNext()
                                         static_cast<float>(similarityScore + 1.0)}); // Weigth (>0)
                 }
             }
-            else
+            else // Otherwise we update the person in the database
             {
                 // Match. Update database ?
 
@@ -194,10 +197,22 @@ void ReidManager::computeNext()
                     cout << "Match (" << similarityScore << ") : " << currentPers.hashId;
                     newPers = false;
 
-                    // We update the informations on the current sequence
-                    currentPers.sequenceList.push_back(SequenceElement());
-                    currentPers.sequenceList.back().features = currentSequence.features;
-                    currentPers.sequenceList.back().camInfo = currentSequence.camInfo;
+                    if(!singleReidMode) // Mode option: We add all the matches
+                    {
+                        // We update the informations on the current sequence
+                        currentPers.sequenceList.push_back(SequenceElement());
+                        currentPers.sequenceList.back().features = currentSequence.features;
+                        currentPers.sequenceList.back().camInfo = currentSequence.camInfo;
+                    }
+                    else // Mode option: We only keep the most similar
+                    {
+                        if(mostSimilarPersonScore < similarityScore) // A person is more similar
+                        {
+                            // Update the most similar
+                            mostSimilarPersonScore = similarityScore;
+                            mostSimilarPerson = &currentPers;
+                        }
+                    }
 
                     if(currentMode == ReidMode::TESTING)
                     {
@@ -268,6 +283,12 @@ void ReidManager::computeNext()
             {
                 listEvaluation.back().nbPersonAdded++;
             }
+        }
+        else if(!newPers && singleReidMode && mostSimilarPerson != nullptr) // Redundancy in the condition (only the last one is necessary) for clarity
+        {
+            mostSimilarPerson->sequenceList.push_back(SequenceElement());
+            mostSimilarPerson->sequenceList.back().features = currentSequence.features;
+            mostSimilarPerson->sequenceList.back().camInfo = currentSequence.camInfo;
         }
 
         if(currentMode == ReidMode::TESTING)
@@ -509,6 +530,7 @@ void ReidManager::updateGui()
     String secondaryText;
     String instructionLine1Text;
     String instructionLine2Text;
+    String instructionLine3Text;
 
     Point positionText(15, 30);
     Scalar color(255, 255, 255);
@@ -570,6 +592,14 @@ void ReidManager::updateGui()
         }
 
         instructionLine2Text = "Save the recognition graph (n) ; Switch to debug mode (d) (save all images)";
+        if(singleReidMode)
+        {
+            instructionLine3Text = "singleReidMode off: no duplicate allowed in the database";
+        }
+        else
+        {
+            instructionLine3Text = "singleReidMode on: duplicate allowed";
+        }
     }
 
     putText(monitorScreen, "Mode: " + mainText, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
@@ -582,6 +612,8 @@ void ReidManager::updateGui()
     putText(monitorScreen, instructionLine1Text, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
     positionText.y += 15;
     putText(monitorScreen, instructionLine2Text, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
+    positionText.y += 15;
+    putText(monitorScreen, instructionLine3Text, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
     positionText.y += 15;
 
     imshow("MainWindow", monitorScreen);
