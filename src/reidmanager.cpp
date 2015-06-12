@@ -9,7 +9,7 @@
 using namespace std;
 using namespace cv;
 
-static const bool sequenceDatasetMode = false; // If true, all sequences will be added to the dataset as individual person
+static const bool sequenceDatasetMode = true; // If true, all sequences will be added to the dataset as individual person
 static const bool singleReidMode = true; // If true, when reid, the new sequence is only added to the most similar person (instead of all matches)
 
 static const bool transitionsIncluded = false; // If true, the program will use the network topology information
@@ -176,25 +176,48 @@ void ReidManager::computeNext()
             }
 
 
+            float reidentificationScore = similarityScore * 1.0 + transitionScore * 1.0; // TODO: Balance the weigth between
+            bool match = reidentificationScore > thresholdValueSamePerson;
+
             if(sequenceDatasetMode) // In sequence dataset mode, we add all all sequences as new person and we compute only the edge
             {
-                if(similarityScore > -0.8) // Record only significant edge
+                // Update database
+                if(reidentificationScore > -0.8) // Record only significant edge
                 {
                     listEdge.push_back({static_cast<float>(currentPersId + 1), // Vertex Id (Ids start at 1)
                                         static_cast<float>(database.size() + 1), // Vertex Id (will be added just after)
-                                        static_cast<float>(similarityScore + 1.0)}); // Weigth (>0)
+                                        static_cast<float>(reidentificationScore + 1.0)}); // Weigth (>0)
+                }
+
+                // Debug
+                if(currentMode == ReidMode::TESTING)
+                {
+                    if(match && currentPers.hashId != hashSeqId) // False positive
+                    {
+                        listEvaluation.back().nbError++;
+                        listEvaluation.back().nbErrorFalsePositiv++;
+                    }
+                    else if(!match && currentPers.hashId == hashSeqId) // False negative
+                    {
+                        listEvaluation.back().nbError++;
+                        listEvaluation.back().nbErrorFalseNegativ++;
+                    }
+                    else
+                    {
+                        listEvaluation.back().nbCumulativeSuccess++;
+                    }
                 }
             }
             else // Otherwise we update the person in the database
             {
-                // Match. Update database ?
+                // Match. Update database
 
-                bool match = similarityScore * 1.0 + transitionScore * 1.0 > thresholdValueSamePerson; // TODO: Balance the weigth between
                 bool matchError = false; // For debugging
 
                 if(match)
                 {
-                    cout << "Match (" << similarityScore << ") : " << currentPers.hashId;
+                    // Match. Update database eventually
+
                     newPers = false;
 
                     if(!singleReidMode) // Mode option: We add all the matches
@@ -206,13 +229,16 @@ void ReidManager::computeNext()
                     }
                     else // Mode option: We only keep the most similar
                     {
-                        if(mostSimilarPersonScore < similarityScore) // A person is more similar
+                        if(mostSimilarPersonScore < reidentificationScore) // A person is more similar
                         {
                             // Update the most similar
-                            mostSimilarPersonScore = similarityScore;
+                            mostSimilarPersonScore = reidentificationScore;
                             mostSimilarPerson = &currentPers;
                         }
                     }
+
+                    // Debug messages
+                    cout << "Match (" << reidentificationScore << ") : " << currentPers.hashId;
 
                     if(currentMode == ReidMode::TESTING)
                     {
@@ -237,7 +263,7 @@ void ReidManager::computeNext()
                 }
                 else if(currentMode == ReidMode::TESTING)
                 {
-                    cout << "Diff (" << similarityScore << ")";
+                    cout << "Diff (" << reidentificationScore << ")";
 
                     if (currentPers.hashId == hashSeqId) // False negative
                     {
@@ -382,7 +408,7 @@ bool ReidManager::eventHandler()
         setDebugMode(!debugMode);
         cout << "Done" << endl;
     }
-    else if(key == 'n' && currentMode == ReidMode::RELEASE)
+    else if(key == 'n' && (currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE))
     {
         cout << "Record the network..." << endl;
         recordNetwork();
@@ -616,8 +642,7 @@ void ReidManager::updateGui()
     putText(monitorScreen, instructionLine3Text, positionText, FONT_HERSHEY_SIMPLEX, 0.5, color);
     positionText.y += 15;
 
-    imshow("MainWindow", monitorScreen);
-    waitKey(1); // update immediately
+    imshow("MainWindow", monitorScreen); // The update will be at the next waitKey
 }
 
 void ReidManager::selectPairs(Mat &dataSet, Mat &classesSet)
@@ -936,6 +961,11 @@ void ReidManager::plotEvaluation()
                 CV_8UC3,
                 Scalar(0,0,0));
 
+    // Clear the received file
+    ofstream resultFile("../../Data/OutputReid/evaluationResult.csv", ofstream::out | ofstream::trunc);
+
+    resultFile << "Id, Errors, Sucess, Sucess rate, False positiv, False Negativ" << endl;
+
     for(size_t i = 1 ; i < listEvaluation.size() ; ++i)
     {
         EvaluationElement evalElemPrev = listEvaluation.at(i-1);
@@ -1015,8 +1045,16 @@ void ReidManager::plotEvaluation()
         if(evalElemNext.nbCumulativeSuccess + evalElemNext.nbError > 0) // The first two elements are null
         {
             cout << "Success at " << i << ":" << evalElemNext.nbCumulativeSuccess * 100 / (evalElemNext.nbCumulativeSuccess + evalElemNext.nbError) << "%" << endl;
+            resultFile << i << ","
+                       << evalElemNext.nbError << ","
+                       <<  evalElemNext.nbCumulativeSuccess << ","
+                       <<  evalElemNext.nbCumulativeSuccess*100/(evalElemNext.nbCumulativeSuccess + evalElemNext.nbError) << ","
+                       <<  evalElemNext.nbErrorFalsePositiv*100/(evalElemNext.nbCumulativeSuccess + evalElemNext.nbError) << ","
+                       <<  evalElemNext.nbErrorFalseNegativ*100/(evalElemNext.nbCumulativeSuccess + evalElemNext.nbError) << endl;
         }
     }
+
+    resultFile.close();
 
     // Display
     namedWindow("Evaluation Results", CV_WINDOW_AUTOSIZE);
