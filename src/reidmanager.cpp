@@ -13,7 +13,8 @@ static const bool sequenceDatasetMode = true; // If true, all sequences will be 
 static const bool singleReidMode = true; // If true, when reid, the new sequence is only added to the most similar person (instead of all matches)
 
 static const bool transitionsIncluded = false; // If true, the program will use the network topology information
-static const float thresholdValueSamePerson = 0.21;
+static const float thresholdValueSamePerson = 0.60; // Above this value, there is recognition (in reid mode)
+static const float minEdgeReidValue = 0.15; // Bellow this value, we do not record the edges
 
 struct ElemTraining
 {
@@ -176,17 +177,27 @@ void ReidManager::computeNext()
             }
 
 
-            float reidentificationScore = similarityScore * 1.0 + transitionScore * 1.0; // TODO: Balance the weigth between
+            // Global reidnetification score and matching
+            float reidentificationScore = similarityScore * 1.0 + transitionScore * 1.0; // TODO: Balance the weigth
+            if(!transitionsIncluded)// Normalize the score between 0.0 and 1.0
+            {
+                reidentificationScore = (reidentificationScore + 1.0)/2.0;
+            }
+            else
+            {
+                // TODO: Correct formula
+                reidentificationScore = (reidentificationScore + 1.0)/2.0;
+            }
             bool match = reidentificationScore > thresholdValueSamePerson;
 
             if(sequenceDatasetMode) // In sequence dataset mode, we add all all sequences as new person and we compute only the edge
             {
                 // Update database
-                if(reidentificationScore > -0.8) // Record only significant edge
+                if(reidentificationScore > minEdgeReidValue) // Record only significant edge
                 {
                     listEdge.push_back({static_cast<float>(currentPersId + 1), // Vertex Id (Ids start at 1)
                                         static_cast<float>(database.size() + 1), // Vertex Id (will be added just after)
-                                        static_cast<float>(reidentificationScore + 1.0)}); // Weigth (>0)
+                                        static_cast<float>(reidentificationScore)}); // Weigth normalized between 0.0 and 1.0
                 }
 
                 // Debug
