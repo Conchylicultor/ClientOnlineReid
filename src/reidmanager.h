@@ -11,6 +11,7 @@
 
 
 enum class ReidMode {RELEASE, TRAINING, TESTING};
+enum class UpdateDatasetMode {INDIVIDUAL_SEQUENCES, CLOSEST_MATCH}; // Define the policy of how update the database when there is a match
 
 struct SequenceElement
 {
@@ -77,6 +78,7 @@ private:
 
     ReidMode currentMode;
     bool calibrationActive;
+    UpdateDatasetMode currentUpdatePolicy; // Define the current recognition policy (If all sequences are added to the dataset as individual person or if we update the closest match)
     bool debugMode; // Save the images for checking the recognition
     std::vector<PersonElement> database;
 

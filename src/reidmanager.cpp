@@ -9,7 +9,6 @@
 using namespace std;
 using namespace cv;
 
-static const bool sequenceDatasetMode = true; // If true, all sequences will be added to the dataset as individual person
 static const bool singleReidMode = true; // If true, when reid, the new sequence is only added to the most similar person (instead of all matches)
 
 static const bool transitionsIncluded = false; // If true, the program will use the network topology information
@@ -27,7 +26,8 @@ struct ElemTraining
 };
 
 ReidManager::ReidManager() :
-    calibrationActive(false)
+    calibrationActive(false),
+    currentUpdatePolicy(UpdateDatasetMode::INDIVIDUAL_SEQUENCES)
 {
     std::srand ( unsigned ( std::time(0) ) );
     namedWindow("MainWindow", WINDOW_AUTOSIZE);
@@ -190,7 +190,7 @@ void ReidManager::computeNext()
             }
             bool match = reidentificationScore > thresholdValueSamePerson;
 
-            if(sequenceDatasetMode) // In sequence dataset mode, we add all all sequences as new person and we compute only the edge
+            if(currentUpdatePolicy == UpdateDatasetMode::INDIVIDUAL_SEQUENCES) // In sequence dataset mode, we add all all sequences as new person and we compute only the edge
             {
                 // Update database
                 if(reidentificationScore > minEdgeReidValue) // Record only significant edge
@@ -219,7 +219,7 @@ void ReidManager::computeNext()
                     }
                 }
             }
-            else // Otherwise we update the person in the database
+            else if(currentUpdatePolicy == UpdateDatasetMode::CLOSEST_MATCH) // Otherwise we update the person in the database
             {
                 // Match. Update database
 
@@ -302,7 +302,7 @@ void ReidManager::computeNext()
         }
 
         // No match
-        if(newPers || sequenceDatasetMode) // If we are in sequence mode, we add all sequences
+        if(newPers || currentUpdatePolicy == UpdateDatasetMode::INDIVIDUAL_SEQUENCES) // If we are in sequence mode, we add all sequences
         {
             cout << "No match: Add the new person to the dataset" << endl;
 
@@ -417,6 +417,21 @@ bool ReidManager::eventHandler()
     {
         cout << "Switch debug mode..." << endl;
         setDebugMode(!debugMode);
+        cout << "Done" << endl;
+    }
+    else if(key == 'a' && (currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE))
+    {
+        cout << "Switch policy to ";
+        if (currentUpdatePolicy == UpdateDatasetMode::CLOSEST_MATCH)
+        {
+            currentUpdatePolicy = UpdateDatasetMode::INDIVIDUAL_SEQUENCES;
+            cout << "individual sequence." << endl;
+        }
+        else if(currentUpdatePolicy == UpdateDatasetMode::INDIVIDUAL_SEQUENCES)
+        {
+            currentUpdatePolicy = UpdateDatasetMode::CLOSEST_MATCH;
+            cout << "closest match." << endl;
+        }
         cout << "Done" << endl;
     }
     else if(key == 'n' && (currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE))
@@ -610,13 +625,13 @@ void ReidManager::updateGui()
 
     if(currentMode == ReidMode::TESTING || currentMode == ReidMode::RELEASE)
     {
-        if(sequenceDatasetMode)
+        if(currentUpdatePolicy == UpdateDatasetMode::INDIVIDUAL_SEQUENCES)
         {
-            secondaryText += "Graph mode on (each incoming sequence is recorded as new person)";
+            secondaryText += "Policy: individual sequences";
         }
-        else
+        else if(currentUpdatePolicy == UpdateDatasetMode::CLOSEST_MATCH)
         {
-            secondaryText = "Graph mode off";
+            secondaryText += "Policy: closest match";
         }
 
         if(debugMode)
@@ -872,7 +887,7 @@ void ReidManager::recordNetwork()
             }
 
             // The person id
-            if(currentMode == ReidMode::TESTING || !sequenceDatasetMode)
+            if(currentMode == ReidMode::TESTING || currentUpdatePolicy == UpdateDatasetMode::CLOSEST_MATCH)
             {
                 fileNetwork << " pers:" << person.hashId;
                 if(j != 0)
